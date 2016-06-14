@@ -32,6 +32,19 @@ json_term_test_() ->
         )
     ].
 
+-spec non_printable_test_() -> _.
+
+non_printable_test_() ->
+    T1 = <<"Hello there!">>,
+    J1 = T1,
+    T2 = term_to_binary("Hello there!"),
+    J2 = [{<<"content_type">>, <<"base64">>}, {<<"content">>, base64:encode(T2)}],
+    [
+        ?_assertEqual(J1, woorl_json:term_to_json(T1, string)),
+        ?_assertEqual(J2, woorl_json:term_to_json(T2, string)),
+        ?_assertEqual(T2, woorl_json:json_to_term(woorl_json:term_to_json(T2, string), string))
+    ].
+
 test_json_1() ->
     [
         [

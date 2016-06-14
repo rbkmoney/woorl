@@ -80,17 +80,21 @@ json_to_term_(Json, {struct, _, {Mod, Name}}, Stack) when is_atom(Mod), is_atom(
     json_to_struct(Json, StructDef, Name, Stack);
 json_to_term_(Json, string, _Stack) when is_binary(Json) ->
     Json;
+json_to_term_(Json = [{_, _} | _], string, _Stack) ->
+    CType = getv(<<"content_type">>, Json),
+    Content = getv(<<"content">>, Json),
+    json_content_to_string(CType, Content);
 json_to_term_(Json, bool, _Stack) when is_boolean(Json) ->
     Json;
 json_to_term_(Json, double, _Stack) when is_number(Json) ->
     float(Json);
-json_to_term_(Json, i8, _Stack) when is_integer(Json), Json >= -(2 bsl 7), Json < (2 bsl 7) ->
+json_to_term_(Json, i8, _Stack) when is_integer(Json), Json >= -(1 bsl 7), Json < (1 bsl 7) ->
     Json;
-json_to_term_(Json, i16, _Stack) when is_integer(Json), Json >= -(2 bsl 15), Json < (2 bsl 15) ->
+json_to_term_(Json, i16, _Stack) when is_integer(Json), Json >= -(1 bsl 15), Json < (1 bsl 15) ->
     Json;
-json_to_term_(Json, i32, _Stack) when is_integer(Json), Json >= -(2 bsl 31), Json < (2 bsl 31) ->
+json_to_term_(Json, i32, _Stack) when is_integer(Json), Json >= -(1 bsl 31), Json < (1 bsl 31) ->
     Json;
-json_to_term_(Json, i64, _Stack) when is_integer(Json), Json >= -(2 bsl 63), Json < (2 bsl 63) ->
+json_to_term_(Json, i64, _Stack) when is_integer(Json), Json >= -(1 bsl 63), Json < (1 bsl 63) ->
     Json;
 json_to_term_(_Json, _Type, _Stack) ->
     error(badarg).
@@ -114,6 +118,9 @@ json_to_struct(Json, StructDef, Name, Stack) when is_list(Json) ->
 json_to_union([{FnBin, Json}], StructDef, Stack) ->
     {_N, _Req, Type, Fn, _Def} = lists:keyfind(binary_to_atom(FnBin, utf8), 4, StructDef),
     {Fn, json_to_term(Json, Type, [Fn | Stack])}.
+
+json_content_to_string(<<"base64">>, Content) ->
+    base64:decode(Content).
 
 %%
 
@@ -160,7 +167,12 @@ term_to_json(Term, Type, _Stack) when is_integer(Term), Type == i8; Type == i16;
 term_to_json(Term, double, _Stack) when is_number(Term) ->
     float(Term);
 term_to_json(Term, string, _Stack) when is_binary(Term) ->
-    Term;
+    case unicode:characters_to_list(Term) of
+        L when is_list(L) ->
+            Term;
+        _ ->
+            term_to_json_content(Term)
+    end;
 term_to_json(_Term, _Type, _Stack) ->
     error(badarg).
 
@@ -180,6 +192,15 @@ struct_to_json(Struct, StructDef, Stack) ->
         [],
         lists:zip(Fields, StructDef)
     ).
+
+term_to_json_content(Term) ->
+    term_to_json_content(<<"base64">>, base64:encode(Term)).
+
+term_to_json_content(CType, Term) ->
+    [
+        {<<"content_type">>, CType},
+        {<<"content">>, Term}
+    ].
 
 %%
 
