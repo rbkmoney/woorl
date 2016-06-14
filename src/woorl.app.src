@@ -1,0 +1,24 @@
+{application, woorl, [
+    {description, "Woody client CLI"},
+    {vsn, "0"},
+    {registered, []},
+    {applications, [
+        kernel,
+        stdlib,
+        genlib,
+        thrift,
+        compiler,
+        woody,
+        snowflake,
+        getopt,
+        cf,
+        jsx
+    ]},
+    {env, []},
+    {modules, []},
+    {maintainers, [
+        "Andrew Mayorov <a.mayorov@rbkmoney.com>"
+    ]},
+    {licenses, []},
+    {links, []}
+]}.
