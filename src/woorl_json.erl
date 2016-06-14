@@ -20,6 +20,10 @@ encode(J) ->
 
 %%
 
+-define (is_integer(T) , (T == byte orelse T == i8 orelse T == i16 orelse T == i32 orelse T == i64)).
+-define (is_number(T)  , (?is_integer(T) orelse T == double)).
+-define (is_scalar(T)  , (?is_number(T) orelse T == string orelse element(1, T) == enum)).
+
 -spec json_to_term(jsx:json_term(), woorl_thrift:type()) -> term().
 
 json_to_term(Json, Type) ->
@@ -44,9 +48,7 @@ json_to_term_(Json, {list, Type}, Stack) when is_list(Json) ->
     [json_to_term(T, Type, [N | Stack]) || {N, T} <- enumerate(0, Json)];
 json_to_term_(Json, {set, Type}, Stack) when is_list(Json) ->
     ordsets:from_list(json_to_term_(Json, {list, Type}, Stack));
-json_to_term_(Json, {map, KType, VType}, Stack) when
-    is_list(Json), KType == string; KType == i8; KType == i16; KType == i32; KType == i64; KType == double
-->
+json_to_term_(Json, {map, KType, VType}, Stack) when is_list(Json), ?is_scalar(KType) ->
     lists:foldl(
         fun ({K, V}, A) ->
             A#{
@@ -88,7 +90,9 @@ json_to_term_(Json, bool, _Stack) when is_boolean(Json) ->
     Json;
 json_to_term_(Json, double, _Stack) when is_number(Json) ->
     float(Json);
-json_to_term_(Json, i8, _Stack) when is_integer(Json), Json >= -(1 bsl 7), Json < (1 bsl 7) ->
+json_to_term_(Json, Type, _Stack) when
+    Type == i8; Type == byte, is_integer(Json), Json >= -(1 bsl 7), Json < (1 bsl 7)
+->
     Json;
 json_to_term_(Json, i16, _Stack) when is_integer(Json), Json >= -(1 bsl 15), Json < (1 bsl 15) ->
     Json;
@@ -101,7 +105,9 @@ json_to_term_(_Json, _Type, _Stack) ->
 
 json_propkey_to_term(P, Type = string, Stack) ->
     json_to_term_(P, Type, Stack);
-json_propkey_to_term(P, Type, Stack) when Type == i8; Type == i16; Type == i32; Type == i64 ->
+json_propkey_to_term(P, Type = {enum, _}, Stack) ->
+    json_to_term_(P, Type, Stack);
+json_propkey_to_term(P, Type, Stack) when ?is_integer(Type) ->
     json_to_term_(binary_to_integer(P), Type, Stack);
 json_propkey_to_term(P, Type = double, Stack) ->
     json_to_term_(try binary_to_float(P) catch error:badarg -> binary_to_integer(P) end, Type, Stack).
@@ -133,9 +139,7 @@ term_to_json(Term, {list, Type}, Stack) when is_list(Term) ->
     [term_to_json(T, Type, [N | Stack]) || {N, T} <- enumerate(0, Term)];
 term_to_json(Term, {set, Type}, Stack) ->
     term_to_json(ordsets:to_list(Term), {list, Type}, Stack);
-term_to_json(Term, {map, KType, VType}, Stack) when
-    is_map(Term), KType == string; KType == i8; KType == i16; KType == i32; KType == i64; KType == double
-->
+term_to_json(Term, {map, KType, VType}, Stack) when is_map(Term), ?is_scalar(KType) ->
     maps:fold(
         fun (K, V, A) ->
             [{genlib:to_binary(K), term_to_json(V, VType, [value, V | Stack])} | A]
@@ -162,7 +166,7 @@ term_to_json(Term, {struct, _, {Mod, Name}}, Stack)  when is_atom(Mod), is_atom(
     struct_to_json(Term, StructDef, Stack);
 term_to_json(Term, {enum, _}, _Stack) when is_atom(Term) ->
     atom_to_binary(Term, utf8);
-term_to_json(Term, Type, _Stack) when is_integer(Term), Type == i8; Type == i16; Type == i32; Type == i64 ->
+term_to_json(Term, Type, _Stack) when is_integer(Term), ?is_integer(Type) ->
     Term;
 term_to_json(Term, double, _Stack) when is_number(Term) ->
     float(Term);
