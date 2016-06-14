@@ -45,6 +45,20 @@ non_printable_test_() ->
         ?_assertEqual(T2, woorl_json:json_to_term(woorl_json:term_to_json(T2, string), string))
     ].
 
+-spec enum_map_test_() -> _.
+
+enum_map_test_() ->
+    T = {map, {enum, {?MODULE, testEnum}}, i32},
+    V = #{red => 42, intermediate => 43},
+    J = [{<<"red">>, 42}, {<<"intermediate">>, 43}],
+    [
+        ?_assertEqual(J, woorl_json:term_to_json(V, T)),
+        ?_assertEqual(V, woorl_json:json_to_term(J, T)),
+        ?_assertEqual(V, woorl_json:json_to_term(woorl_json:term_to_json(V, T), T))
+    ].
+
+%%
+
 test_json_1() ->
     [
         [

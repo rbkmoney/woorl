@@ -22,7 +22,7 @@ encode(J) ->
 
 -define (is_integer(T) , (T == byte orelse T == i8 orelse T == i16 orelse T == i32 orelse T == i64)).
 -define (is_number(T)  , (?is_integer(T) orelse T == double)).
--define (is_scalar(T)  , (?is_number(T) orelse T == string)).
+-define (is_scalar(T)  , (?is_number(T) orelse T == string orelse element(1, T) == enum)).
 
 -spec json_to_term(jsx:json_term(), woorl_thrift:type()) -> term().
 
@@ -104,6 +104,8 @@ json_to_term_(_Json, _Type, _Stack) ->
     error(badarg).
 
 json_propkey_to_term(P, Type = string, Stack) ->
+    json_to_term_(P, Type, Stack);
+json_propkey_to_term(P, Type = {enum, _}, Stack) ->
     json_to_term_(P, Type, Stack);
 json_propkey_to_term(P, Type, Stack) when ?is_integer(Type) ->
     json_to_term_(binary_to_integer(P), Type, Stack);
