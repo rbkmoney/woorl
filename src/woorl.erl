@@ -259,7 +259,7 @@ format_error({invalid_term, N, Path}) ->
 format_error({missing_term, N, Path}) ->
     {"Parameter ~p does not conform to schema, missing required field ~!^~s~!!~n", [N, format_path(Path)]};
 format_error({unknown_service_function, Service, Function}) ->
-    {"Unable to find service ~!^~s~!! with declared function ~!^~s~!!",
+    {"Unable to find service ~!^~s~!! with declared function ~!^~s~!!~n",
         [Service, Function]};
 format_error({arguments_mismatch, Passed, Required}) ->
     {"Function accepts ~p parameters but ~p passed~n", [Required, Passed]};
