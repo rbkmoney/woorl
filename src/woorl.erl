@@ -9,11 +9,11 @@
 
 %%
 
--define(SUCCESS     , 0).
--define(EXCEPTION   , 1).
--define(WOODY_ERROR , 2).
--define(COMPILE_ERROR   , 64).
--define(INPUT_ERROR , 128).
+-define(SUCCESS       , 0).
+-define(EXCEPTION     , 1).
+-define(WOODY_ERROR   , 2).
+-define(COMPILE_ERROR , 64).
+-define(INPUT_ERROR   , 128).
 
 get_options_spec() ->
     [
@@ -62,7 +62,7 @@ get_default_reqid() ->
 
 main(Args) ->
     ok = init_globals(),
-    {ok, _} = application:ensure_all_started(?MODULE, temporary),
+    {ok, _} = application:ensure_all_started(?MODULE),
     {Url, Request, Schema, Opts} = parse_options(Args),
     report_call_result(issue_call(Url, Request, Opts), Schema).
 
