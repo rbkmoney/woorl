@@ -79,7 +79,7 @@ json_to_term_(Json, {struct, union, {Mod, Name}}, Stack) when is_atom(Mod), is_a
     json_to_union(Json, StructDef, Stack);
 json_to_term_(Json, {struct, _, {Mod, Name}}, Stack) when is_atom(Mod), is_atom(Name) ->
     {struct, _, StructDef} = Mod:struct_info(Name),
-    json_to_struct(Json, StructDef, Name, Stack);
+    json_to_struct(Json, StructDef, Mod:record_name(Name), Stack);
 json_to_term_(Json, string, _Stack) when is_binary(Json) ->
     Json;
 json_to_term_(Json = [{_, _} | _], string, _Stack) ->
@@ -112,8 +112,8 @@ json_propkey_to_term(P, Type, Stack) when ?is_integer(Type) ->
 json_propkey_to_term(P, Type = double, Stack) ->
     json_to_term_(try binary_to_float(P) catch error:badarg -> binary_to_integer(P) end, Type, Stack).
 
-json_to_struct(Json, StructDef, Name, Stack) when is_list(Json) ->
-    list_to_tuple([Name | lists:map(
+json_to_struct(Json, StructDef, RecordName, Stack) when is_list(Json) ->
+    list_to_tuple([RecordName | lists:map(
         fun ({_N, Req, Type, Fn, Def}) ->
             FJson = getv(atom_to_binary(Fn, utf8), Json, Def),
             json_to_term(FJson, {Req, Type}, [Fn | Stack])
@@ -161,7 +161,7 @@ term_to_json(Term, {map, KType, VType}, Stack) when is_map(Term) ->
 term_to_json(Term, {struct, union, {Mod, Name}}, Stack) when is_atom(Mod), is_atom(Name) ->
     {struct, _, StructDef} = Mod:struct_info(Name),
     union_to_json(Term, StructDef, Stack);
-term_to_json(Term, {struct, _, {Mod, Name}}, Stack)  when is_atom(Mod), is_atom(Name), is_tuple(Term) ->
+term_to_json(Term, {struct, _, {Mod, Name}}, Stack) when is_atom(Mod), is_atom(Name), is_tuple(Term) ->
     {struct, _, StructDef} = Mod:struct_info(Name),
     struct_to_json(Term, StructDef, Stack);
 term_to_json(Term, {enum, _}, _Stack) when is_atom(Term) ->

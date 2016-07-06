@@ -112,7 +112,7 @@ generate_schemas(Paths, TempPath) ->
     [filename:join(TempPath, P) || P <- filelib:wildcard("*.erl", TempPath)].
 
 generate_schema(Path, TempPath) ->
-    CmdArgs = ["-r", "-out", TempPath, "--gen", "erlang", Path],
+    CmdArgs = ["-r", "-out", TempPath, "--gen", "erlang:scoped_typenames", Path],
     Command = string:join(["thrift" | CmdArgs], " "),
     case woorl_utils:sh(Command) of
         {ok, _} ->
