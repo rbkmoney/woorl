@@ -20,9 +20,9 @@
  {<<"ssl_verify_fun">>,{pkg,<<"ssl_verify_fun">>,<<"1.1.0">>},2},
  {<<"thrift">>,
   {git,"https://github.com/rbkmoney/thrift_erlang.git",
-       {ref,"1978d5a1e350694bfa3d2dc3a762176bc60c6e64"}},
+       {ref,"2a39a0b373d98f3b52d32912a3dab88c6b4c5037"}},
   1},
  {<<"woody">>,
   {git,"git@github.com:rbkmoney/woody_erlang.git",
-       {ref,"302e829154dd4231bb3ada7238b243e98fc84912"}},
+       {ref,"cccf733393d197610491a9ece6fdd3f5ebf74c26"}},
   0}].

@@ -183,9 +183,9 @@ render_reply(Reply, Schema) ->
     woorl_json:encode(woorl_json:term_to_json(Reply, woorl_thrift:get_reply_type(Schema))).
 
 render_exception(Exception, Schema) ->
-    ExceptionSchema = woorl_thrift:get_exception_type(Exception, Schema),
+    {Name, ExceptionSchema} = woorl_thrift:get_exception_type(Exception, Schema),
     woorl_json:encode([
-        {<<"exception">>, element(1, Exception)},
+        {<<"exception">>, Name},
         {<<"data">>, woorl_json:term_to_json(Exception, ExceptionSchema)}
     ]).
 

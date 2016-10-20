@@ -87,12 +87,12 @@ get_param_types({{struct, _, SchemaDef}, _, _}) ->
 get_reply_type({_, ReplyType, _}) ->
     ReplyType.
 
--spec get_exception_type(tuple(), function_schema()) -> type().
+-spec get_exception_type(tuple(), function_schema()) -> {Name :: atom(), type()}.
 
 get_exception_type(Exception, {_, _, {struct, _, StructDef}}) ->
     ExceptionName = element(1, Exception),
-    [ExceptionSchema] = [
-        Type || {_N, _Req, {struct, exception, {_, En}} = Type, _Name, _} <- StructDef,
-            En =:= ExceptionName
-    ],
-    ExceptionSchema.
+    hd([
+        {En, Type} ||
+            {_N, _Req, {struct, exception, {Mod, En}} = Type, _Name, _} <- StructDef,
+                Mod:record_name(En) =:= ExceptionName
+    ]).
