@@ -74,8 +74,16 @@ json_to_term_(Json, {map, KType, VType}, Stack) when is_list(Json) ->
         #{},
         Json
     );
-json_to_term_(Json, {enum, _}, _Stack) when is_binary(Json) ->
-    binary_to_atom(Json, utf8);
+json_to_term_(Json, {enum, {Mod, Name}}, Stack) when is_atom(Mod), is_atom(Name) ->
+    json_to_term_(Json, Mod:enum_info(Name), Stack);
+json_to_term_(Json, {enum, Fields}, _Stack) when is_list(Fields), is_binary(Json) ->
+    V = binary_to_atom(Json, utf8),
+    case lists:keyfind(V, 1, Fields) of
+        {V, _} ->
+            V;
+        false ->
+            error(badarg)
+    end;
 json_to_term_(Json, {struct, union, {Mod, Name}}, Stack) when is_atom(Mod), is_atom(Name) ->
     {struct, union, StructDef} = Mod:struct_info(Name),
     json_to_union(Json, StructDef, Stack);
