@@ -264,7 +264,7 @@ format_error({unknown_service_function, Service, Function}) ->
 format_error({arguments_mismatch, Passed, Required}) ->
     {"Function accepts ~p parameters but ~p passed~n", [Required, Passed]};
 format_error({woody_error, {Class, Reason, Stacktrace}}) ->
-    {"Call failed: ~!Y~s:~s~!! ~s~n",
+    {"Call failed: ~!Y~s:~p~!! ~s~n",
         [Class, Reason, genlib_format:format_stacktrace(Stacktrace, [newlines])]};
 format_error({woody_error, {transport_error, Why}}) ->
     {"Call failed with transport error: ~!Y~64000p~!!~n", [Why]};
