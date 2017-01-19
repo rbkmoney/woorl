@@ -48,6 +48,8 @@ json_to_term_(Json, {list, Type}, Stack) when is_list(Json) ->
     [json_to_term(T, Type, [N | Stack]) || {N, T} <- enumerate(0, Json)];
 json_to_term_(Json, {set, Type}, Stack) when is_list(Json) ->
     ordsets:from_list(json_to_term_(Json, {list, Type}, Stack));
+json_to_term_([{}], {map, KType, _VType}, _Stack) when ?is_scalar(KType) ->
+    #{};
 json_to_term_(Json, {map, KType, VType}, Stack) when is_list(Json), ?is_scalar(KType) ->
     lists:foldl(
         fun ({K, V}, A) ->
