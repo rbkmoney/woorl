@@ -187,8 +187,10 @@ term_to_json(Term, string, _Stack) when is_binary(Term) ->
         _ ->
             term_to_json_content(Term)
     end;
+term_to_json(Term, bool, _Stack) when is_boolean(Term) ->
+    Term;
 term_to_json(_Term, _Type, _Stack) ->
-    error(badarg).
+    error({badarg, _Term, _Type}).
 
 union_to_json({Fn, Term}, StructDef, Stack) ->
     {_N, _Req, Type, Fn, _Def} = lists:keyfind(Fn, 4, StructDef),
