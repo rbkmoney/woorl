@@ -9,6 +9,7 @@
 
 -export([struct_info/1]).
 -export([enum_info/1]).
+-export([record_name/1]).
 
 -spec test() -> _.
 
@@ -49,8 +50,8 @@ non_printable_test_() ->
 
 enum_map_test_() ->
     T = {map, {enum, {?MODULE, testEnum}}, i32},
-    V = #{red => 42, intermediate => 43},
-    J = [{<<"red">>, 42}, {<<"intermediate">>, 43}],
+    V = #{red => 42, indeterminate => 43},
+    J = [{<<"red">>, 42}, {<<"indeterminate">>, 43}],
     [
         ?_assertEqual(J, woorl_json:term_to_json(V, T)),
         ?_assertEqual(V, woorl_json:json_to_term(J, T)),
@@ -119,4 +120,11 @@ enum_info(testEnum) ->
         {indeterminate, 4}
     ]};
 enum_info(_) ->
+    error(badarg).
+
+-spec record_name(atom()) -> atom() | no_return().
+
+record_name(testStruct) ->
+    'testStruct';
+record_name(_) ->
     error(badarg).
