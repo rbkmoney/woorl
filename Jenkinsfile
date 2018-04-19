@@ -4,7 +4,7 @@
 build('woorl', 'docker-host') {
 
   checkoutRepo()
-  loadBuildUtils()
+  loadBuildUtils('build-utils')
 
   def pipeDefault
   def withWsCache
