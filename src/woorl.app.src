@@ -9,6 +9,7 @@
         thrift,
         compiler,
         woody,
+        woody_user_identity,
         snowflake,
         getopt,
         cf,
