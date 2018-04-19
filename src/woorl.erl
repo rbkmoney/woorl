@@ -190,7 +190,7 @@ attach_user_identity(Opts, Context) ->
             Context
     end.
 
-report_call_result(ok, _) ->
+report_call_result({ok, ok}, _) ->
     ok;
 report_call_result({ok, Reply}, Schema) ->
     report_reply(render_reply(Reply, Schema));
