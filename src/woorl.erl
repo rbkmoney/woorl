@@ -5,7 +5,7 @@
 %%
 
 -behaviour(woody_event_handler).
--export([handle_event/3]).
+-export([handle_event/4]).
 
 %%
 
@@ -23,6 +23,11 @@ get_options_spec() ->
             "Designated request identifier"},
         {schema, $s, "schema", string,
             "One or more Thrift schema definitions to use"},
+        {user_id, $u, "user-id", string,
+            "ID of the user on whose behalf the call is being made"},
+        {user_realm, $r, "user-realm", string,
+            "The realm of the user on whose behalf the call is being made, "
+            "must be present if the user ID is specified"},
         {tempdir, undefined, "tempdir", string,
             "A path to the directory which will be used to temporarily store Thrift compilation artifacts"},
         {url, undefined, undefined, string,
@@ -164,11 +169,28 @@ json_to_term(Json, Type, N) ->
     end.
 
 issue_call(Url, Request, Opts) ->
-    Context = woody_client:new_context(require_option(reqid, Opts), ?MODULE),
-    {Result, _} = woody_client:call_safe(Context, Request, #{url => Url}),
-    Result.
+    ReqID = require_option(reqid, Opts),
+    RpcID = woody_context:new_rpc_id(<<"undefined">>, ReqID, woody_context:new_req_id()),
+    Context = attach_user_identity(Opts, woody_context:new(RpcID)),
+    CallOpts = #{url => genlib:to_binary(Url), event_handler => ?MODULE},
+    try woody_client:call(Request, CallOpts, Context) catch
+        error:{woody_error, Reason} ->
+            {error, Reason}
+    end.
 
-report_call_result(ok, _) ->
+attach_user_identity(Opts, Context) ->
+    case get_option(user_id, Opts) of
+        ID when ID /= undefined ->
+            Realm = require_option(user_realm, Opts),
+            woody_user_identity:put(
+                #{id => list_to_binary(ID), realm => list_to_binary(Realm)},
+                Context
+            );
+        undefined ->
+            Context
+    end.
+
+report_call_result({ok, ok}, _) ->
     ok;
 report_call_result({ok, Reply}, Schema) ->
     report_reply(render_reply(Reply, Schema));
@@ -191,22 +213,30 @@ render_exception(Exception, Schema) ->
 
 %%
 
--spec handle_event(
-    woody_event_handler:event_type(),
-    woody_t:rpc_id(),
-    woody_event_handler:event_meta_type()
-) -> _.
+-spec handle_event(Event, RpcId, Meta, Opts) -> ok when
+    Event :: woody_event_handler:event(),
+    RpcId :: woody:rpc_id() | undefined,
+    Meta  :: woody_event_handler:event_meta(),
+    Opts  :: woody:options().
 
-handle_event(EventType, RpcID, EventMeta) ->
-    report_progress({woody, RpcID, EventType, EventMeta}).
+handle_event(Event, RpcID, Meta, _Opts) ->
+    report_progress({woody, RpcID, Event, Meta}).
 
 %%
 
-require_option(Key, Opts) ->
+get_option(Key, Opts) ->
     case lists:keyfind(Key, 1, Opts) of
         {_, Val} ->
             Val;
         false ->
+            undefined
+    end.
+
+require_option(Key, Opts) ->
+    case get_option(Key, Opts) of
+        Val when Val /= undefined ->
+            Val;
+        undefined ->
             abort_with_usage({missing_option, Key})
     end.
 
@@ -263,15 +293,17 @@ format_error({unknown_service_function, Service, Function}) ->
         [Service, Function]};
 format_error({arguments_mismatch, Passed, Required}) ->
     {"Function accepts ~p parameters but ~p passed~n", [Required, Passed]};
-format_error({woody_error, {Class, Reason, Stacktrace}}) ->
-    {"Call failed: ~!Y~s:~p~!! ~s~n",
-        [Class, Reason, genlib_format:format_stacktrace(Stacktrace, [newlines])]};
-format_error({woody_error, {transport_error, Why}}) ->
-    {"Call failed with transport error: ~!Y~64000p~!!~n", [Why]};
-format_error({woody_error, {protocol_error, Why}}) ->
-    {"Call failed with protocol error: ~!Y~64000p~!!~n", [Why]};
+format_error({woody_error, {_Source, Class, Details}}) ->
+    {format_error_class(Class) ++ ": ~!^~s~!!~n", [Details]};
 format_error(Why) ->
     {"~!Y~p~!!~n", [Why]}.
+
+format_error_class(result_unexpected) ->
+    "Received ~!Yunexpected~!! result";
+format_error_class(resource_unavailable) ->
+    "Resource ~!Yunavailable~!!";
+format_error_class(result_unknown) ->
+    "Result ~!Yunknown~!!".
 
 format_path(Path) ->
     string:join(lists:map(fun format_path_part/1, Path), ".").
