@@ -30,6 +30,10 @@ get_options_spec() ->
             "must be present if the user ID is specified"},
         {tempdir, undefined, "tempdir", string,
             "A path to the directory which will be used to temporarily store Thrift compilation artifacts"},
+        {deadline, undefined, "deadline", binary,
+            "The request deadline timestamp (e.g. '1990-12-31T23:59:60.123123Z')"},
+        {timeout, undefined, "timeout", integer,
+            "The request timeout in milliseconds (e.g. '10000')"},
         {url, undefined, undefined, string,
             "Woody service URL (e.g. 'http://svc.localhost/v1/leftpad')"},
         {service, undefined, undefined, string,
@@ -171,12 +175,15 @@ json_to_term(Json, Type, N) ->
 issue_call(Url, Request, Opts) ->
     ReqID = require_option(reqid, Opts),
     RpcID = woody_context:new_rpc_id(<<"undefined">>, ReqID, woody_context:new_req_id()),
-    Context = attach_user_identity(Opts, woody_context:new(RpcID)),
+    Context = apply_options_to_context(Opts, woody_context:new(RpcID)),
     CallOpts = #{url => genlib:to_binary(Url), event_handler => ?MODULE},
     try woody_client:call(Request, CallOpts, Context) catch
         error:{woody_error, Reason} ->
             {error, Reason}
     end.
+
+apply_options_to_context(Opts, Context) ->
+    attach_deadline(Opts, attach_user_identity(Opts, Context)).
 
 attach_user_identity(Opts, Context) ->
     case get_option(user_id, Opts) of
@@ -188,6 +195,28 @@ attach_user_identity(Opts, Context) ->
             );
         undefined ->
             Context
+    end.
+
+attach_deadline(Opts, Context) ->
+    case get_deadline(Opts) of
+        Deadline when Deadline /= undefined ->
+            woody_context:set_deadline(Deadline, Context);
+        undefined ->
+            Context
+    end.
+
+get_deadline(Opts) ->
+    MaybeDeadline = get_option(deadline, Opts),
+    MaybeTimeout = get_option(timeout, Opts),
+    case {MaybeDeadline, MaybeTimeout} of
+        {undefined, undefined} ->
+            undefined;
+        {Deadline, undefined} ->
+            woody_deadline:from_binary(Deadline);
+        {undefined, Timeout} ->
+            woody_deadline:from_timeout(Timeout);
+        {_Deadline, _Timeout} ->
+            abort_with_usage({incompatible_options, [deadline, timeout]})
     end.
 
 report_call_result({ok, ok}, _) ->
@@ -276,6 +305,8 @@ format_error({invalid_option, Opt}) ->
     {"Invalid option ~!^~s~!!~n", [Opt]};
 format_error({missing_option, Key}) ->
     {"Missing required option ~!^~s~!!~n", [Key]};
+format_error({incompatible_options, Opts}) ->
+    {"Can't specify options ~!^~p~!! at the same time!~n", [Opts]};
 format_error({invalid_file, Path}) ->
     {"Not a regular file: ~!Y~s~!!~n", [Path]};
 format_error({invalid_temp_dir, Path, Why}) ->
