@@ -31,7 +31,8 @@ get_options_spec() ->
         {tempdir, undefined, "tempdir", string,
             "A path to the directory which will be used to temporarily store Thrift compilation artifacts"},
         {deadline, undefined, "deadline", binary,
-            "The request deadline (e.g. '1990-12-31T23:59:60.123123Z', '+15h', '+3000ms' etc)"},
+            "The request deadline, either absolute (e.g. '1990-12-31T23:59:60.123123Z')"
+            "or relative (e.g. '15h', '3000ms', '3.5d' etc). Known units are 'ms', 's', 'm', 'h', 'd'."},
         {url, undefined, undefined, string,
             "Woody service URL (e.g. 'http://svc.localhost/v1/leftpad')"},
         {service, undefined, undefined, string,
@@ -204,7 +205,7 @@ attach_deadline(Opts, Context) ->
     end.
 
 get_deadline(Opts) ->
-    case woorl_utils:parse_pretty_deadline(get_option(deadline, Opts)) of
+    case woorl_deadline:parse_pretty(get_option(deadline, Opts)) of
         {ok, Deadline} ->
             Deadline;
         {error, bad_deadline} ->

@@ -2,7 +2,7 @@
 
 -export([unique_string/1]).
 -export([temp_dir/2]).
--export([parse_pretty_deadline/1]).
+
 -export([sh/1]).
 
 %%
@@ -36,65 +36,6 @@ sh(Command) ->
     after
         port_close(Port)
     end.
-
--spec parse_pretty_deadline
-    (binary()) -> {ok, woody:deadline()} | {error, bad_deadline};
-    (undefined) -> {ok, undefined}.
-
-parse_pretty_deadline(undefined) ->
-    {ok, undefined};
-parse_pretty_deadline(DeadlineStr) ->
-    Parsers = [
-        fun try_parse_woody_default/1,
-        fun try_parse_relative/1
-    ],
-    parse_pretty_deadline(DeadlineStr, Parsers).
-
-
-%%
-%% Internals
-%%
-
-parse_pretty_deadline(_DeadlineStr, []) ->
-    {error, bad_deadline};
-parse_pretty_deadline(DeadlineStr, [P | Parsers]) ->
-    case P(DeadlineStr) of
-        {ok, _Deadline} = Result ->
-            Result;
-        {error, bad_deadline} ->
-            parse_pretty_deadline(DeadlineStr, Parsers)
-    end.
-
-try_parse_woody_default(DeadlineStr) ->
-    try woody_deadline:from_binary(DeadlineStr) of
-        Deadline ->
-            {ok, Deadline}
-    catch
-        error:{bad_deadline, _Reason} ->
-            {error, bad_deadline}
-    end.
-
-try_parse_relative(DeadlineStr) ->
-    %% deadline string like '+1ms', '+30m', '+2h' etc
-    case re:run(DeadlineStr, <<"^\\+(\\d+)(\\w+)$">>) of
-        {match, [_FullGroup, NumberGroup, UnitGroup]} ->
-            Number = erlang:binary_to_integer(binary:part(DeadlineStr, NumberGroup)),
-            Unit = binary:part(DeadlineStr, UnitGroup),
-            try_parse_relative(Number, Unit);
-        _Other ->
-            {error, bad_deadline}
-    end.
-
-try_parse_relative(Number, <<"ms">>) ->
-    {ok, woody_deadline:from_timeout(Number)};
-try_parse_relative(Number, <<"s">>) ->
-    {ok, woody_deadline:from_timeout(Number * 1000)};
-try_parse_relative(Number, <<"m">>) ->
-    {ok, woody_deadline:from_timeout(Number * 1000 * 60)};
-try_parse_relative(Number, <<"h">>) ->
-    {ok, woody_deadline:from_timeout(Number * 1000 * 60 * 60)};
-try_parse_relative(_Number, _Unit) ->
-    {error, bad_deadline}.
 
 sh_loop(Port, Acc) ->
     receive
