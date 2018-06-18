@@ -31,9 +31,7 @@ get_options_spec() ->
         {tempdir, undefined, "tempdir", string,
             "A path to the directory which will be used to temporarily store Thrift compilation artifacts"},
         {deadline, undefined, "deadline", binary,
-            "The request deadline timestamp (e.g. '1990-12-31T23:59:60.123123Z')"},
-        {timeout, undefined, "timeout", integer,
-            "The request timeout in milliseconds (e.g. '10000')"},
+            "The request deadline (e.g. '1990-12-31T23:59:60.123123Z', '+15h', '+3000ms' etc)"},
         {url, undefined, undefined, string,
             "Woody service URL (e.g. 'http://svc.localhost/v1/leftpad')"},
         {service, undefined, undefined, string,
@@ -206,17 +204,11 @@ attach_deadline(Opts, Context) ->
     end.
 
 get_deadline(Opts) ->
-    MaybeDeadline = get_option(deadline, Opts),
-    MaybeTimeout = get_option(timeout, Opts),
-    case {MaybeDeadline, MaybeTimeout} of
-        {undefined, undefined} ->
-            undefined;
-        {Deadline, undefined} ->
-            woody_deadline:from_binary(Deadline);
-        {undefined, Timeout} ->
-            woody_deadline:from_timeout(Timeout);
-        {_Deadline, _Timeout} ->
-            abort_with_usage({incompatible_options, [deadline, timeout]})
+    case woorl_utils:parse_pretty_deadline(get_option(deadline, Opts)) of
+        {ok, Deadline} ->
+            Deadline;
+        {error, bad_deadline} ->
+            abort_with_usage({invalid_format, deadline})
     end.
 
 report_call_result({ok, ok}, _) ->
@@ -305,8 +297,8 @@ format_error({invalid_option, Opt}) ->
     {"Invalid option ~!^~s~!!~n", [Opt]};
 format_error({missing_option, Key}) ->
     {"Missing required option ~!^~s~!!~n", [Key]};
-format_error({incompatible_options, Opts}) ->
-    {"Can't specify options ~!^~p~!! at the same time!~n", [Opts]};
+format_error({invalid_format, Opt}) ->
+    {"Invalid ~!^~p~!! option format~n", [Opt]};
 format_error({invalid_file, Path}) ->
     {"Not a regular file: ~!Y~s~!!~n", [Path]};
 format_error({invalid_temp_dir, Path, Why}) ->
