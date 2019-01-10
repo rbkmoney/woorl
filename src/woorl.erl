@@ -85,7 +85,7 @@ parse_options(Args) ->
 
 prepare_options(Opts, Args) ->
     Url = require_option(url, Opts),
-    SchemaPaths = lists:usort(require_options(schema, Opts)),
+    SchemaPaths = require_options(schema, Opts), % we deliberately do not care about duplicates here
     ServiceName = require_option(service, Opts),
     FunctionName = require_option(function, Opts),
     Modules = prepare_schemas(SchemaPaths, Opts),
@@ -100,9 +100,10 @@ prepare_schemas(SchemaPaths, Opts) ->
     _ = assert_paths(SchemaPaths),
     TempPath = make_temp_dir(woorl_utils:temp_dir(genlib_opts:get(tempdir, Opts), "woorl-gen")),
     ErlPaths = generate_schemas(SchemaPaths, TempPath),
-    Modules = compile_artifacts(ErlPaths),
+    Modules0 = compile_artifacts(ErlPaths),
+    Modules1 = filter_service_modules(Modules0, SchemaPaths),
     _ = clean_temp_dir(TempPath),
-    Modules.
+    Modules1.
 
 make_temp_dir(Path) ->
     case file:make_dir(Path) of
@@ -136,6 +137,10 @@ compile_artifact(Path) ->
     {ok, Module, Bin} = compile:file(Path, [binary, debug_info]),
     {module, Module} = code:load_binary(Module, Path, Bin),
     Module.
+
+filter_service_modules(Modules, SchemaPaths) ->
+    SchemaNames = [list_to_binary(filename:basename(SP, ".thrift")) || SP <- SchemaPaths],
+    [M || SN <- SchemaNames, M <- Modules, binary:match(atom_to_binary(M, utf8), SN) /= nomatch].
 
 detect_service_function(ServiceName, FunctionName, Modules) ->
     Service = list_to_atom(ServiceName),
