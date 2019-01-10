@@ -85,7 +85,7 @@ parse_options(Args) ->
 
 prepare_options(Opts, Args) ->
     Url = require_option(url, Opts),
-    SchemaPaths = lists:usort(require_options(schema, Opts)),
+    SchemaPaths = require_options(schema, Opts), % we deliberately do not care about duplicates here
     ServiceName = require_option(service, Opts),
     FunctionName = require_option(function, Opts),
     Modules = prepare_schemas(SchemaPaths, Opts),
@@ -140,7 +140,7 @@ compile_artifact(Path) ->
 
 filter_service_modules(Modules, SchemaPaths) ->
     SchemaNames = [list_to_binary(filename:basename(SP, ".thrift")) || SP <- SchemaPaths],
-    [M || M <- Modules, binary:match(atom_to_binary(M, utf8), SchemaNames) /= nomatch].
+    [M || SN <- SchemaNames, M <- Modules, binary:match(atom_to_binary(M, utf8), SN) /= nomatch].
 
 detect_service_function(ServiceName, FunctionName, Modules) ->
     Service = list_to_atom(ServiceName),
