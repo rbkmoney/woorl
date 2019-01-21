@@ -48,7 +48,7 @@ report_usage() ->
         [{
             "<param>",
             "Function parameter according to Thrift schema, represented with JSON. "
-            "If you start the parameter with the letter @, the rest should be a name of JSON file."
+            "If it starts with `@' symbol then the rest will be interpreted as a name of a file containing JSON value."
         }]
     ),
     io:format(standard_error, "~s", [[
