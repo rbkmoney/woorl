@@ -45,8 +45,11 @@ report_usage() ->
     getopt:usage(
         get_options_spec(), ?MODULE_STRING,
         "[<param>...]",
-        [{"<param>",
-            "Function parameter according to Thrift schema, represented with JSON"}]
+        [{
+            "<param>",
+            "Function parameter according to Thrift schema, represented with JSON. "
+            "If you start the parameter with the letter @, the rest should be a name of JSON file."
+        }]
     ),
     io:format(standard_error, "~s", [[
         "Exit status:\n",
