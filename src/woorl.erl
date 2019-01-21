@@ -45,8 +45,11 @@ report_usage() ->
     getopt:usage(
         get_options_spec(), ?MODULE_STRING,
         "[<param>...]",
-        [{"<param>",
-            "Function parameter according to Thrift schema, represented with JSON"}]
+        [{
+            "<param>",
+            "Function parameter according to Thrift schema, represented with JSON. "
+            "If it starts with `@' symbol then the rest will be interpreted as a name of a file containing JSON value."
+        }]
     ),
     io:format(standard_error, "~s", [[
         "Exit status:\n",
@@ -154,13 +157,19 @@ detect_service_function(ServiceName, FunctionName, Modules) ->
 
 prepare_function_args(Args, Schema) ->
     Types = woorl_thrift:get_param_types(Schema),
-    Json = [decode_json(A) || A <- Args],
+    Json = [decode_json(read_arg_contents(A)) || A <- Args],
     case {length(Json), length(Types)} of
         {L, L} ->
             [json_to_term(J, Type, N) || {N, J, Type} <- lists:zip3(lists:seq(1, L), Json, Types)];
         {L, M} ->
             abort(?INPUT_ERROR, {arguments_mismatch, L, M})
     end.
+
+read_arg_contents([$@ | Name]) ->
+    {ok, Bin} = file:read_file(Name),
+    Bin;
+read_arg_contents(A) ->
+    A.
 
 decode_json(A) ->
     try woorl_json:decode(A) catch

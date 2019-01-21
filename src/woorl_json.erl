@@ -8,10 +8,12 @@
 
 %%
 
--spec decode(string()) -> jsx:json_term().
+-spec decode(string() | binary()) -> jsx:json_term().
 
-decode(S) ->
-    jsx:decode(unicode:characters_to_binary(S), [{labels, binary}]).
+decode(S) when is_binary(S) ->
+    jsx:decode(S, [{labels, binary}]);
+decode(S) when is_list(S) ->
+    decode(unicode:characters_to_binary(S)).
 
 -spec encode(jsx:json_term()) -> binary().
 
