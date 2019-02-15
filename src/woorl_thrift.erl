@@ -48,7 +48,7 @@
 
 -export_type([function_schema/0]).
 
--spec find_function(woody_t:service_name(), woody_t:func(), [module()]) ->
+-spec find_function(woody:service_name(), woody:func(), [module()]) ->
     {module(), function_schema()} | notfound.
 
 find_function(Service, Function, [Module | Rest]) ->
@@ -69,7 +69,7 @@ check_function(Service, Function, Module) ->
             undefined
     end.
 
--spec get_function_schema(module(), woody_t:service_name(), woody_t:func()) ->
+-spec get_function_schema(module(), woody:service_name(), woody:func()) ->
     function_schema().
 
 get_function_schema(Module, Service, Function) ->

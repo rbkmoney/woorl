@@ -189,7 +189,7 @@ issue_call(Url, Request, Opts) ->
     ReqID = require_option(reqid, Opts),
     RpcID = woody_context:new_rpc_id(<<"undefined">>, ReqID, woody_context:new_req_id()),
     Context = apply_options_to_context(Opts, woody_context:new(RpcID)),
-    CallOpts = #{url => genlib:to_binary(Url), event_handler => ?MODULE},
+    CallOpts = #{url => Url, event_handler => ?MODULE},
     try woody_client:call(Request, CallOpts, Context) catch
         error:{woody_error, Reason} ->
             {error, Reason}
