@@ -6,18 +6,36 @@ _woorl_ stands for _woody curl_.
 
 ## Примеры использования
 
-```
-$ woorl -s ~/ws/damsel/proto/payment_processing.thrift \
-    'http://localhost:8042/v1/processing/invoicing' \
-    Invoicing Get '{"id":"42"}' '"0.834.0"'
-{
-  "exception": "MachineNotFound",
-  "data": {}
-}
+* Обработка и представление исключений:
 
-$ echo $?
-1
-```
+        $ woorl -s ~/ws/damsel/proto/payment_processing.thrift \
+            'http://localhost:8042/v1/processing/invoicing' \
+            Invoicing Get '{"id":"42"}' '"0.834.0"'
+        {
+          "exception": "MachineNotFound",
+          "data": {}
+        }
+
+        $ echo $?
+        1
+
+* Представление как получаемых от сервера, так и отправляемых клиентом нечитаемых binary в виде content object с кодированием в base64:
+
+        $ woorl -s ~/ws/damsel/proto/cds.thrift 'http://cds:8022/v1/keyring' Keyring Init 2 3
+        [
+          {
+            "content_type": "base64",
+            "content": "AgHFMYEHOR1oGmRwPg20O/yyN2nwViIqTT+qtlNzGk/jig=="
+          },
+          {
+            "content_type": "base64",
+            "content": "AgKe7/slQul68mTtpOhjIlE45/NImIe94yWDYMVjouEjig=="
+          },
+          {
+            "content_type": "base64",
+            "content": "AgNcpSY7a050qmRt0kAu3sG1XIUgKeQ7cthv2beYynBjig=="
+          }
+        ]
 
 ## Известные проблемы
 
