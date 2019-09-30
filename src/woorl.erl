@@ -72,6 +72,7 @@ get_default_reqid() ->
 -spec main([string()]) -> no_return().
 
 main(Args) ->
+    ok = configure_logger(),
     ok = init_globals(),
     {ok, _} = application:ensure_all_started(?MODULE),
     {Url, Request, Schema, Opts} = parse_options(Args),
@@ -283,6 +284,32 @@ require_options(Key, Opts) ->
         [] ->
             abort_with_usage({missing_option, Key})
     end.
+
+configure_logger() ->
+    Handlers = [
+        #{
+            id => default,
+            module => logger_std_h,
+            level => debug,
+            config => #{
+                type => standard_error
+            },
+            formatter => {logger_formatter, #{}}
+        }
+    ],
+    ok = lists:foreach(
+        fun(#{id := HandlerID}) ->
+            ok = logger:remove_handler(HandlerID)
+        end,
+        logger:get_handler_config()
+    ),
+    ok = lists:foreach(
+        fun(#{id := HandlerID, module := Module} = Config) ->
+            ok = logger:add_handler(HandlerID, Module, Config)
+        end,
+        Handlers
+    ),
+    ok.
 
 %%
 
