@@ -17,6 +17,8 @@
 
 get_options_spec() ->
     [
+        {help, $h, "help", undefined,
+            "Print this message and exit"},
         {verbose, $v, "verbose", {boolean, false},
             "Be more verbose"},
         {reqid, undefined, "reqid", {binary, get_default_reqid()},
@@ -42,6 +44,7 @@ get_options_spec() ->
     ].
 
 report_usage() ->
+    print_version(),
     getopt:usage(
         get_options_spec(), ?MODULE_STRING,
         "[<param>...]",
@@ -60,6 +63,10 @@ report_usage() ->
         [format_exit_code(?INPUT_ERROR)   , $\t, "Input error"               "\n"],
         "\n"
     ]]).
+
+print_version() ->
+    {ok, Vsn} = application:get_key(?MODULE, vsn),
+    io:format(standard_error, "~s ~s~n~n", [?MODULE_STRING, Vsn]).
 
 format_exit_code(C) ->
     genlib_string:pad_left(integer_to_binary(C), $\s, 5).
@@ -81,6 +88,7 @@ main(Args) ->
 parse_options(Args) ->
     case getopt:parse(get_options_spec(), Args) of
         {ok, {Opts, RestArgs}} ->
+            _ = has_option(help, Opts) andalso exit_with_usage(),
             ok = set_global(verbose, require_option(verbose, Opts)),
             prepare_options(Opts, RestArgs);
         {error, Why} ->
@@ -261,6 +269,9 @@ handle_event(Event, RpcID, Meta, _Opts) ->
 
 %%
 
+has_option(Key, Opts) ->
+    lists:member(Key, Opts) orelse lists:keyfind(Key, 1, Opts) /= false.
+
 get_option(Key, Opts) ->
     case lists:keyfind(Key, 1, Opts) of
         {_, Val} ->
@@ -401,6 +412,12 @@ abort_with_usage(Why) ->
     report_error(Why),
     report_usage(),
     abort(?INPUT_ERROR).
+
+-spec exit_with_usage() -> no_return().
+
+exit_with_usage() ->
+    report_usage(),
+    abort(?SUCCESS).
 
 -spec abort(1..255, term()) -> no_return().
 
