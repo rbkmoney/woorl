@@ -31,7 +31,7 @@ build('woorl', 'docker-host') {
     }
 
     runStage('dialyze') {
-      withWsCache("_build/default/rebar3_21.1.1_plt") {
+      withWsCache("_build/default/rebar3_22.3.1_plt") {
         sh 'make wc_dialyze'
       }
     }
