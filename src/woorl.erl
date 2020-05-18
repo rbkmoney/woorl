@@ -1,4 +1,5 @@
 -module(woorl).
+-mode(compile).
 
 -export([main/1]).
 
@@ -111,11 +112,30 @@ assert_paths(Paths) ->
 prepare_schemas(SchemaPaths, Opts) ->
     _ = assert_paths(SchemaPaths),
     TempPath = make_temp_dir(woorl_utils:temp_dir(genlib_opts:get(tempdir, Opts), "woorl-gen")),
-    ErlPaths = generate_schemas(SchemaPaths, TempPath),
-    Modules0 = compile_artifacts(ErlPaths),
-    Modules1 = filter_service_modules(Modules0, SchemaPaths),
+    Modules = lists:foldl(
+        fun (SchemaPath, Acc) -> prepare_schema(SchemaPath, TempPath) ++ Acc end,
+        [],
+        SchemaPaths
+    ),
     _ = clean_temp_dir(TempPath),
-    Modules1.
+    Modules.
+
+prepare_schema(SchemaPath, TempPath) ->
+    prepare_schema(SchemaPath, filename:extension(SchemaPath), TempPath).
+
+prepare_schema(SchemaPath, ".thrift", TempPath) ->
+    ErlFilesWas = filelib:wildcard("*.erl", TempPath),
+    ok = generate_schema(SchemaPath, TempPath),
+    ErlFilesNew = filelib:wildcard("*.erl", TempPath) -- ErlFilesWas,
+    ErlPaths = [filename:join(TempPath, P) || P <- ErlFilesNew],
+    Modules0 = compile_artifacts(ErlPaths),
+    Modules1 = filter_service_modules(Modules0, SchemaPath),
+    Modules1;
+prepare_schema(SchemaPath, ".beam", _) ->
+    true = code:add_pathz(filename:dirname(SchemaPath)),
+    ModuleName = list_to_atom(filename:basename(SchemaPath, ".beam")),
+    {module, Module} = code:load_file(ModuleName),
+    [Module].
 
 make_temp_dir(Path) ->
     case file:make_dir(Path) of
@@ -127,10 +147,6 @@ make_temp_dir(Path) ->
 
 clean_temp_dir(Path) ->
     woorl_utils:sh("rm -rf " ++ Path).
-
-generate_schemas(Paths, TempPath) ->
-    _ = [generate_schema(P, TempPath) || P <- Paths],
-    [filename:join(TempPath, P) || P <- filelib:wildcard("*.erl", TempPath)].
 
 generate_schema(Path, TempPath) ->
     CmdArgs = ["-r", "-out", TempPath, "--gen", "erlang:scoped_typenames", Path],
@@ -150,9 +166,9 @@ compile_artifact(Path) ->
     {module, Module} = code:load_binary(Module, Path, Bin),
     Module.
 
-filter_service_modules(Modules, SchemaPaths) ->
-    SchemaNames = [list_to_binary(filename:basename(SP, ".thrift")) || SP <- SchemaPaths],
-    [M || SN <- SchemaNames, M <- Modules, binary:match(atom_to_binary(M, utf8), SN) /= nomatch].
+filter_service_modules(Modules, SchemaPath) ->
+    SchemaName = list_to_binary(filename:basename(SchemaPath, ".thrift")),
+    [M || M <- Modules, binary:match(atom_to_binary(M, utf8), SchemaName) /= nomatch].
 
 detect_service_function(ServiceName, FunctionName, Modules) ->
     Service = list_to_atom(ServiceName),
