@@ -11,7 +11,7 @@
 -spec decode(string() | binary()) -> jsx:json_term().
 
 decode(S) when is_binary(S) ->
-    jsx:decode(S, [{labels, binary}]);
+    jsx:decode(S, [{labels, binary}, {return_maps, false}]);
 decode(S) when is_list(S) ->
     decode(unicode:characters_to_binary(S)).
 
