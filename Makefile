@@ -9,7 +9,7 @@ TEMPLATES_PATH := .
 SERVICE_NAME := woorl
 
 # Build image tag to be used
-BUILD_IMAGE_TAG   := 442c2c274c1d8e484e5213089906a4271641d95e
+BUILD_IMAGE_TAG   := 917afcdd0c0a07bf4155d597bbba72e962e1a34a
 SERVICE_IMAGE_TAG := bdb3e60ddc70044bae1aa581d260d3a9803a2477
 
 CALL_ANYWHERE    := all submodules compile xref lint dialyze test clean distclean
