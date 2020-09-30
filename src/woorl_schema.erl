@@ -39,6 +39,9 @@ prepare_schema(SchemaPath, ".thrift", TempPath) ->
     Modules1 = filter_required_modules(Modules0, SchemaPath),
     Modules1;
 prepare_schema(SchemaPath, ".beam", _) ->
+    % TODO
+    % This is undocumented hack for now, you can pass compiled .beam files in as schemas so that
+    % woorl could skip schema compiling step altogether. All in the name of speed.
     true = code:add_pathz(filename:dirname(SchemaPath)),
     ModuleName = list_to_atom(filename:basename(SchemaPath, ".beam")),
     {module, Module} = code:load_file(ModuleName),
