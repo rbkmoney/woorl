@@ -225,12 +225,13 @@ decode_thrift(V, Type) ->
     Codec = thrift_strict_binary_codec:new(V),
     case thrift_strict_binary_codec:read(Codec, Type) of
         {ok, Term, CodecLeft} ->
-            case thrift_strict_binary_codec:close(CodecLeft) of
+            _ = case thrift_strict_binary_codec:close(CodecLeft) of
                 <<>> ->
-                    Term;
+                    ok;
                 Leftovers ->
-                    abort(?INPUT_ERROR, {invalid_thrift, {extra_bytes_left, Leftovers}})
-            end;
+                    report_error({excess_thrift_bytes, Leftovers})
+            end,
+            Term;
         {error, Reason} ->
             abort(?INPUT_ERROR, {invalid_thrift, Reason})
     end.
@@ -430,6 +431,8 @@ format_error({invalid_json, V}) ->
     {"Invalid JSON value: ~!Y~s~!!~n", [V]};
 format_error({invalid_thrift, Reason}) ->
     {"Thrift binary does not parse: ~!^~0p~!!~n", [Reason]};
+format_error({excess_thrift_bytes, Bytes}) ->
+    {"Thrift binary has extra bytes at the end: ~!^~0p~!!~n", [Bytes]};
 format_error({invalid_term, N, Path}) ->
     {"Parameter ~p does not conform to schema in field ~!^~s~!!~n", [N, format_path(Path)]};
 format_error({invalid_term, Path}) ->
