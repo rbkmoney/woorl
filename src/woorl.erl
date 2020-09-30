@@ -1,4 +1,5 @@
 -module(woorl).
+-mode(compile).
 
 -export([main/1]).
 
@@ -169,7 +170,7 @@ prepare_function_args(Args, Schema) ->
     Json = [decode_json(read_arg_contents(A)) || A <- Args],
     case {length(Json), length(Types)} of
         {L, L} ->
-            [json_to_term(J, Type, N) || {N, J, Type} <- lists:zip3(lists:seq(1, L), Json, Types)];
+            list_to_tuple([json_to_term(J, Type, N) || {N, J, Type} <- lists:zip3(lists:seq(1, L), Json, Types)]);
         {L, M} ->
             abort(?INPUT_ERROR, {arguments_mismatch, L, M})
     end.
