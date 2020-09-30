@@ -16,7 +16,7 @@
 -define(COMPILE_ERROR , 64).
 -define(INPUT_ERROR   , 128).
 
-get_options_spec() ->
+get_options_spec(woorl) ->
     [
         {help, $h, "help", undefined,
             "Print this message and exit"},
@@ -42,12 +42,28 @@ get_options_spec() ->
             "Woody service name (e.g. 'LeftPadder')"},
         {function, undefined, undefined, string,
             "Woody service function name (e.g. 'PadIt')"}
+    ];
+
+get_options_spec(woorl_json) ->
+    [
+        {help, $h, "help", undefined,
+            "Print this message and exit"},
+        {schema, $s, "schema", string,
+            "Thrift schema definition to use"},
+        {type, $t, "type", atom,
+            "Thrift type to use, e.g. 'ComplexStruct'"},
+        {tempdir, undefined, "tempdir", string,
+            "A path to the directory which will be used to temporarily store Thrift compilation artifacts"},
+        {decode, $d, "decode", boolean,
+            "Decode a Thrift binary into JSON representation of a Thrift term (this is default mode)"},
+        {encode, $e, "encode", boolean,
+            "Encode a JSON representation of Thrift term into a Thrift binary"}
     ].
 
-report_usage() ->
+report_usage(woorl) ->
     print_version(),
     getopt:usage(
-        get_options_spec(), ?MODULE_STRING,
+        get_options_spec(woorl), ?MODULE_STRING,
         "[<param>...]",
         [{
             "<param>",
@@ -60,6 +76,20 @@ report_usage() ->
         [format_exit_code(?SUCCESS)       , $\t, "Call succeeded"            "\n"],
         [format_exit_code(?EXCEPTION)     , $\t, "Call raised an exception"  "\n"],
         [format_exit_code(?WOODY_ERROR)   , $\t, "Call failed"               "\n"],
+        [format_exit_code(?COMPILE_ERROR) , $\t, "Schema compilation failed" "\n"],
+        [format_exit_code(?INPUT_ERROR)   , $\t, "Input error"               "\n"],
+        "\n"
+    ]]);
+
+report_usage(woorl_json) ->
+    print_version(),
+    getopt:usage(
+        get_options_spec(woorl_json), "woorl-json",
+        []
+    ),
+    io:format(standard_error, "~s", [[
+        "Exit status:\n",
+        [format_exit_code(?SUCCESS)       , $\t, "Succeeded"                 "\n"],
         [format_exit_code(?COMPILE_ERROR) , $\t, "Schema compilation failed" "\n"],
         [format_exit_code(?INPUT_ERROR)   , $\t, "Input error"               "\n"],
         "\n"
@@ -83,20 +113,33 @@ main(Args) ->
     ok = configure_logger(),
     ok = init_globals(),
     {ok, _} = application:ensure_all_started(?MODULE),
-    {Url, Request, Schema, Opts} = parse_options(Args),
-    report_call_result(issue_call(Url, Request, Opts), Schema).
+    ScriptName = filename:basename(escript:script_name()),
+    case ScriptName of
+        % TODO
+        % Dispatch this in different modules, it's coupled too tightly right now.
+        "woorl-json" ->
+            Script = woorl_json,
+            ok = set_global(script, Script),
+            {Op, Type, Input} = parse_options(Script, Args),
+            io:format(standard_io, "~s", [convert_input(Op, Type, Input)]);
+        _Otherwise ->
+            Script = woorl,
+            ok = set_global(script, Script),
+            {Url, Request, Schema, Opts} = parse_options(Script, Args),
+            report_call_result(issue_call(Url, Request, Opts), Schema)
+    end.
 
-parse_options(Args) ->
-    case getopt:parse(get_options_spec(), Args) of
+parse_options(Script, Args) ->
+    case getopt:parse(get_options_spec(Script), Args) of
         {ok, {Opts, RestArgs}} ->
             _ = has_option(help, Opts) andalso exit_with_usage(),
-            ok = set_global(verbose, require_option(verbose, Opts)),
-            prepare_options(Opts, RestArgs);
+            ok = set_global(verbose, get_option(verbose, Opts) == true),
+            prepare_options(Script, Opts, RestArgs);
         {error, Why} ->
             abort_with_usage(Why)
     end.
 
-prepare_options(Opts, Args) ->
+prepare_options(woorl, Opts, Args) ->
     Url = require_option(url, Opts),
     SchemaPaths = require_options(schema, Opts), % we deliberately do not care about duplicates here
     ServiceName = require_option(service, Opts),
@@ -104,56 +147,47 @@ prepare_options(Opts, Args) ->
     Modules = prepare_schemas(SchemaPaths, Opts),
     {Service, Function, Schema} = detect_service_function(ServiceName, FunctionName, Modules),
     FunctionArgs = prepare_function_args(Args, Schema),
-    {Url, {Service, Function, FunctionArgs}, Schema, Opts}.
+    {Url, {Service, Function, FunctionArgs}, Schema, Opts};
 
-assert_paths(Paths) ->
-    [abort(?INPUT_ERROR, {invalid_file, P}) || P <- Paths, not filelib:is_regular(P)].
+prepare_options(woorl_json, Opts, []) ->
+    TypeName = require_option(type, Opts),
+    SchemaPath = require_option(schema, Opts),
+    Op = detect_operation(get_option(encode, Opts), get_option(decode, Opts)),
+    Modules = prepare_schemas([SchemaPath], Opts),
+    Type = detect_type(TypeName, Modules),
+    {Op, Type, woorl_utils:read_input()};
+prepare_options(woorl_json, _Opts, ExtraArgs) ->
+    abort_with_usage({invalid_extra_args, ExtraArgs}).
+
+detect_operation(true, undefined) ->
+    encode;
+detect_operation(undefined, _) ->
+    decode;
+detect_operation(true, true) ->
+    abort(?INPUT_ERROR, {invalid_option, "decode + encode"}).
+
+detect_type(TypeName, [Module | Rest]) ->
+    try Module:struct_info(TypeName) of
+        {struct, Flavor, _StructDef} ->
+            {struct, Flavor, {Module, TypeName}}
+    catch
+        error:badarg ->
+            detect_type(TypeName, Rest)
+    end;
+detect_type(TypeName, []) ->
+    abort(?INPUT_ERROR, {invalid_type, TypeName}).
 
 prepare_schemas(SchemaPaths, Opts) ->
-    _ = assert_paths(SchemaPaths),
-    TempPath = make_temp_dir(woorl_utils:temp_dir(genlib_opts:get(tempdir, Opts), "woorl-gen")),
-    ErlPaths = generate_schemas(SchemaPaths, TempPath),
-    Modules0 = compile_artifacts(ErlPaths),
-    Modules1 = filter_service_modules(Modules0, SchemaPaths),
-    _ = clean_temp_dir(TempPath),
-    Modules1.
-
-make_temp_dir(Path) ->
-    case file:make_dir(Path) of
-        ok ->
-            Path;
-        {error, Reason} ->
-            abort(?INPUT_ERROR, {invalid_temp_dir, Path, Reason})
+    case woorl_schema:prepare(SchemaPaths, Opts) of
+        {ok, Modules} ->
+            Modules;
+        {error, {invalid_file, _} = Reason} ->
+            abort(?INPUT_ERROR, Reason);
+        {error, {invalid_temp_dir, _, _} = Reason} ->
+            abort(?INPUT_ERROR, Reason);
+        {error, {compilation_failed, _, _, _} = Reason} ->
+            abort(?COMPILE_ERROR, Reason)
     end.
-
-clean_temp_dir(Path) ->
-    woorl_utils:sh("rm -rf " ++ Path).
-
-generate_schemas(Paths, TempPath) ->
-    _ = [generate_schema(P, TempPath) || P <- Paths],
-    [filename:join(TempPath, P) || P <- filelib:wildcard("*.erl", TempPath)].
-
-generate_schema(Path, TempPath) ->
-    CmdArgs = ["-r", "-out", TempPath, "--gen", "erlang:scoped_typenames", Path],
-    Command = string:join(["thrift" | CmdArgs], " "),
-    case woorl_utils:sh(Command) of
-        {ok, _} ->
-            ok;
-        {error, {Code, Output}} ->
-            abort(?COMPILE_ERROR, {compilation_failed, Path, Code, Output})
-    end.
-
-compile_artifacts(Paths) ->
-    [compile_artifact(P) || P <- Paths].
-
-compile_artifact(Path) ->
-    {ok, Module, Bin} = compile:file(Path, [binary, debug_info]),
-    {module, Module} = code:load_binary(Module, Path, Bin),
-    Module.
-
-filter_service_modules(Modules, SchemaPaths) ->
-    SchemaNames = [list_to_binary(filename:basename(SP, ".thrift")) || SP <- SchemaPaths],
-    [M || SN <- SchemaNames, M <- Modules, binary:match(atom_to_binary(M, utf8), SN) /= nomatch].
 
 detect_service_function(ServiceName, FunctionName, Modules) ->
     Service = list_to_atom(ServiceName),
@@ -185,6 +219,20 @@ decode_json(A) ->
     try woorl_json:decode(A) catch
         error:badarg ->
             abort(?INPUT_ERROR, {invalid_json, A})
+    end.
+
+decode_thrift(V, Type) ->
+    Codec = thrift_strict_binary_codec:new(V),
+    case thrift_strict_binary_codec:read(Codec, Type) of
+        {ok, Term, CodecLeft} ->
+            case thrift_strict_binary_codec:close(CodecLeft) of
+                <<>> ->
+                    Term;
+                Leftovers ->
+                    abort(?INPUT_ERROR, {invalid_thrift, {extra_bytes_left, Leftovers}})
+            end;
+        {error, Reason} ->
+            abort(?INPUT_ERROR, {invalid_thrift, Reason})
     end.
 
 json_to_term(Json, Type, N) ->
@@ -256,6 +304,23 @@ render_exception(Exception, Schema) ->
         {<<"exception">>, Name},
         {<<"data">>, woorl_json:term_to_json(Exception, ExceptionSchema)}
     ]).
+
+convert_input(decode, Type, Input) ->
+    Term = decode_thrift(Input, Type),
+    woorl_json:encode(woorl_json:term_to_json(Term, Type));
+convert_input(encode, Type, Input) ->
+    Term = json_to_term(decode_json(Input), Type),
+    Codec = thrift_strict_binary_codec:new(<<>>),
+    {ok, Codec1} = thrift_strict_binary_codec:write(Codec, Type, Term),
+    thrift_strict_binary_codec:close(Codec1).
+
+json_to_term(Json, Type) ->
+    try woorl_json:json_to_term(Json, Type) catch
+        {invalid, Where} ->
+            abort(?INPUT_ERROR, {invalid_term, Where});
+        {missing, Where} ->
+            abort(?INPUT_ERROR, {missing_term, Where})
+    end.
 
 %%
 
@@ -349,6 +414,8 @@ report_error(Why) ->
 
 format_error({invalid_option, Opt}) ->
     {"Invalid option ~!^~s~!!~n", [Opt]};
+format_error({invalid_extra_args, Args}) ->
+    {"Extra command line arguments are unexpected: ~!^~p~!!~n", [Args]};
 format_error({missing_option, Key}) ->
     {"Missing required option ~!^~s~!!~n", [Key]};
 format_error({invalid_format, Opt}) ->
@@ -361,10 +428,16 @@ format_error({compilation_failed, Path, _Code, Why}) ->
     {"Failed to compile schema ~!^~s~!!:~n~!Y~s~!!", [Path, Why]};
 format_error({invalid_json, V}) ->
     {"Invalid JSON value: ~!Y~s~!!~n", [V]};
+format_error({invalid_thrift, Reason}) ->
+    {"Thrift binary does not parse: ~!^~0p~!!~n", [Reason]};
 format_error({invalid_term, N, Path}) ->
     {"Parameter ~p does not conform to schema in field ~!^~s~!!~n", [N, format_path(Path)]};
+format_error({invalid_term, Path}) ->
+    {"Input does not conform to schema in field ~!^~s~!!~n", [format_path(Path)]};
 format_error({missing_term, N, Path}) ->
     {"Parameter ~p does not conform to schema, missing required field ~!^~s~!!~n", [N, format_path(Path)]};
+format_error({missing_term, Path}) ->
+    {"Input does not conform to schema, missing required field ~!^~s~!!~n", [format_path(Path)]};
 format_error({unknown_service_function, Service, Function}) ->
     {"Unable to find service ~!^~s~!! with declared function ~!^~s~!!~n",
         [Service, Function]};
@@ -411,13 +484,13 @@ report_exception(R) ->
 
 abort_with_usage(Why) ->
     report_error(Why),
-    report_usage(),
+    report_usage(get_global(script)),
     abort(?INPUT_ERROR).
 
 -spec exit_with_usage() -> no_return().
 
 exit_with_usage() ->
-    report_usage(),
+    report_usage(get_global(script)),
     abort(?SUCCESS).
 
 -spec abort(1..255, term()) -> no_return().
