@@ -71,15 +71,13 @@ report_usage(woorl) ->
             "If it starts with `@' symbol then the rest will be interpreted as a name of a file containing JSON value."
         }]
     ),
-    io:format(standard_error, "~s", [[
-        "Exit status:\n",
-        [format_exit_code(?SUCCESS)       , $\t, "Call succeeded"            "\n"],
-        [format_exit_code(?EXCEPTION)     , $\t, "Call raised an exception"  "\n"],
-        [format_exit_code(?WOODY_ERROR)   , $\t, "Call failed"               "\n"],
-        [format_exit_code(?COMPILE_ERROR) , $\t, "Schema compilation failed" "\n"],
-        [format_exit_code(?INPUT_ERROR)   , $\t, "Input error"               "\n"],
-        "\n"
-    ]]);
+    report_exit_codes([
+        ?SUCCESS,
+        ?EXCEPTION,
+        ?WOODY_ERROR,
+        ?COMPILE_ERROR,
+        ?INPUT_ERROR
+    ]);
 
 report_usage(woorl_json) ->
     print_version(),
@@ -87,19 +85,29 @@ report_usage(woorl_json) ->
         get_options_spec(woorl_json), "woorl-json",
         []
     ),
-    io:format(standard_error, "~s", [[
-        "Exit status:\n",
-        [format_exit_code(?SUCCESS)       , $\t, "Succeeded"                 "\n"],
-        [format_exit_code(?COMPILE_ERROR) , $\t, "Schema compilation failed" "\n"],
-        [format_exit_code(?INPUT_ERROR)   , $\t, "Input error"               "\n"],
-        "\n"
-    ]]).
+    report_exit_codes([
+        ?SUCCESS,
+        ?COMPILE_ERROR,
+        ?INPUT_ERROR
+    ]).
 
 print_version() ->
     {ok, Vsn} = application:get_key(?MODULE, vsn),
     io:format(standard_error, "~s ~s~n~n", [?MODULE_STRING, Vsn]).
 
-format_exit_code(C) ->
+report_exit_codes(Codes) ->
+    io:format(standard_error, "~s", [[
+        "Exit status:\n" |
+        [[pad_exit_code(Code), $\t, format_exit_code(Code), $\n] || Code <- Codes]
+    ]]).
+
+format_exit_code(?SUCCESS)       -> "Call succeeded";
+format_exit_code(?EXCEPTION)     -> "Call raised an exception";
+format_exit_code(?WOODY_ERROR)   -> "Call failed";
+format_exit_code(?COMPILE_ERROR) -> "Schema compilation failed";
+format_exit_code(?INPUT_ERROR)   -> "Input error".
+
+pad_exit_code(C) ->
     genlib_string:pad_left(integer_to_binary(C), $\s, 5).
 
 get_default_reqid() ->
