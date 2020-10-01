@@ -5,6 +5,8 @@
 
 -export([sh/1]).
 
+-export([read_input/0]).
+
 %%
 
 -spec unique_string(binary()) -> binary().
@@ -51,4 +53,20 @@ sh_loop(Port, Acc) ->
                 {Port, {exit_status, Rc}} ->
                     {error, {Rc, Data}}
             end
+    end.
+
+-define(BLK_SIZE, 16384).
+
+-spec read_input() ->
+    binary().
+read_input() ->
+    ok = io:setopts(standard_io, [binary]),
+    string:chomp(read_input(<<>>)).
+
+read_input(Acc) ->
+    case file:read(standard_io, ?BLK_SIZE) of
+        {ok, Data} ->
+            read_input(<<Acc/bytes, Data/bytes>>);
+        eof ->
+            Acc
     end.
