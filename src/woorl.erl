@@ -28,6 +28,10 @@ get_options_spec(woorl) ->
             "One or more Thrift schema definitions to use"},
         {user_id, $u, "user-id", string,
             "ID of the user on whose behalf the call is being made"},
+        {user_name, undefined, "user-name", string,
+            "Name of the user identified with user-id, ignored when user-id is not set"},
+        {user_email, undefined, "user-email", string,
+            "Email address of the user identified with user-id, ignored when user-id is not set"},
         {user_realm, $r, "user-realm", string,
             "The realm of the user on whose behalf the call is being made, "
             "must be present if the user ID is specified"},
@@ -269,10 +273,22 @@ attach_user_identity(Opts, Context) ->
     case get_option(user_id, Opts) of
         ID when ID /= undefined ->
             Realm = require_option(user_realm, Opts),
-            woody_user_identity:put(
-                #{id => list_to_binary(ID), realm => list_to_binary(Realm)},
-                Context
-            );
+            Identity1 = #{
+                id => list_to_binary(ID),
+                realm => list_to_binary(Realm)
+            },
+            Identity2 = maps:fold(
+                fun
+                    (_, undefined, Identity) -> Identity;
+                    (K, V, Identity)         -> Identity#{K => list_to_binary(V)}
+                end,
+                Identity1,
+                #{
+                    username => get_option(user_name, Opts),
+                    email => get_option(user_email, Opts)
+                }
+            ),
+            woody_user_identity:put(Identity2, Context);
         undefined ->
             Context
     end.
