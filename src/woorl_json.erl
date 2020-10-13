@@ -9,30 +9,29 @@
 %%
 
 -spec decode(string() | binary()) -> jsx:json_term().
-
 decode(S) when is_binary(S) ->
     jsx:decode(S, [{labels, binary}, {return_maps, false}]);
 decode(S) when is_list(S) ->
     decode(unicode:characters_to_binary(S)).
 
 -spec encode(jsx:json_term()) -> binary().
-
 encode(J) ->
     jsx:encode(J, [space, {indent, 2}]).
 
 %%
 
--define (is_integer(T) , (T == byte orelse T == i8 orelse T == i16 orelse T == i32 orelse T == i64)).
--define (is_number(T)  , (?is_integer(T) orelse T == double)).
--define (is_scalar(T)  , (?is_number(T) orelse T == string orelse element(1, T) == enum)).
+-define(is_integer(T), (T == byte orelse T == i8 orelse T == i16 orelse T == i32 orelse T == i64)).
+-define(is_number(T), (?is_integer(T) orelse T == double)).
+-define(is_scalar(T), (?is_number(T) orelse T == string orelse element(1, T) == enum)).
 
 -spec json_to_term(jsx:json_term(), woorl_thrift:type()) -> term().
-
 json_to_term(Json, Type) ->
     json_to_term(Json, Type, []).
 
 json_to_term(Json, Type, Stack) ->
-    try json_to_term_(Json, Type, Stack) catch
+    try
+        json_to_term_(Json, Type, Stack)
+    catch
         error:missing ->
             throw({missing, lists:reverse(Stack)});
         error:_ ->
@@ -45,7 +44,6 @@ json_to_term_(undefined, {required, _Type}, _Stack) ->
     error(missing);
 json_to_term_(Json, {Req, Type}, Stack) when Req == optional; Req == required ->
     json_to_term_(Json, Type, Stack);
-
 json_to_term_(Json, {list, Type}, Stack) when is_list(Json) ->
     [json_to_term(T, Type, [N | Stack]) || {N, T} <- enumerate(0, Json)];
 json_to_term_(Json, {set, Type}, Stack) when is_list(Json) ->
@@ -54,7 +52,7 @@ json_to_term_([{}], {map, KType, _VType}, _Stack) when ?is_scalar(KType) ->
     #{};
 json_to_term_(Json, {map, KType, VType}, Stack) when is_list(Json), ?is_scalar(KType) ->
     lists:foldl(
-        fun ({K, V}, A) ->
+        fun({K, V}, A) ->
             A#{
                 json_propkey_to_term(K, KType, [key, K | Stack]) =>
                     json_to_term(V, VType, [value, K | Stack])
@@ -65,7 +63,7 @@ json_to_term_(Json, {map, KType, VType}, Stack) when is_list(Json), ?is_scalar(K
     );
 json_to_term_(Json, {map, KType, VType}, Stack) when is_list(Json) ->
     lists:foldl(
-        fun (Pair, A) ->
+        fun(Pair, A) ->
             K = getv(<<"key">>, Pair),
             V = getv(<<"value">>, Pair),
             A#{
@@ -122,16 +120,27 @@ json_propkey_to_term(P, Type = {enum, _}, Stack) ->
 json_propkey_to_term(P, Type, Stack) when ?is_integer(Type) ->
     json_to_term_(binary_to_integer(P), Type, Stack);
 json_propkey_to_term(P, Type = double, Stack) ->
-    json_to_term_(try binary_to_float(P) catch error:badarg -> binary_to_integer(P) end, Type, Stack).
+    json_to_term_(
+        try
+            binary_to_float(P)
+        catch
+            error:badarg -> binary_to_integer(P)
+        end,
+        Type,
+        Stack
+    ).
 
 json_to_struct(Json, StructDef, RecordName, Stack) when is_list(Json) ->
-    list_to_tuple([RecordName | lists:map(
-        fun ({_N, Req, Type, Fn, Def}) ->
-            FJson = getv(atom_to_binary(Fn, utf8), Json, Def),
-            json_to_term(FJson, {Req, Type}, [Fn | Stack])
-        end,
-        StructDef
-    )]).
+    list_to_tuple([
+        RecordName
+        | lists:map(
+            fun({_N, Req, Type, Fn, Def}) ->
+                FJson = getv(atom_to_binary(Fn, utf8), Json, Def),
+                json_to_term(FJson, {Req, Type}, [Fn | Stack])
+            end,
+            StructDef
+        )
+    ]).
 
 json_to_union([{FnBin, Json}], StructDef, Stack) ->
     {_N, _Req, Type, Fn, _Def} = lists:keyfind(binary_to_atom(FnBin, utf8), 4, StructDef),
@@ -143,7 +152,6 @@ json_content_to_string(<<"base64">>, Content) ->
 %%
 
 -spec term_to_json(term(), woorl_thrift:type()) -> jsx:json_term().
-
 term_to_json(Term, Type) ->
     term_to_json(Term, Type, []).
 
@@ -153,7 +161,7 @@ term_to_json(Term, {set, Type}, Stack) ->
     term_to_json(ordsets:to_list(Term), {list, Type}, Stack);
 term_to_json(Term, {map, KType, VType}, Stack) when is_map(Term), ?is_scalar(KType) ->
     maps:fold(
-        fun (K, V, A) ->
+        fun(K, V, A) ->
             [{genlib:to_binary(K), term_to_json(V, VType, [value, V | Stack])} | A]
         end,
         [],
@@ -161,11 +169,14 @@ term_to_json(Term, {map, KType, VType}, Stack) when is_map(Term), ?is_scalar(KTy
     );
 term_to_json(Term, {map, KType, VType}, Stack) when is_map(Term) ->
     maps:fold(
-        fun (K, V, A) ->
-            [[
-                {<<"key">>, term_to_json(K, KType, [key, K | Stack])},
-                {<<"value">>, term_to_json(V, VType, [value, V | Stack])}
-            ] | A]
+        fun(K, V, A) ->
+            [
+                [
+                    {<<"key">>, term_to_json(K, KType, [key, K | Stack])},
+                    {<<"value">>, term_to_json(V, VType, [value, V | Stack])}
+                ]
+                | A
+            ]
         end,
         [],
         Term
@@ -226,7 +237,6 @@ enumerate(_, []) ->
     [];
 enumerate(N, [H | T]) ->
     [{N, H} | enumerate(N + 1, T)].
-
 
 getv(Key, Opts) ->
     getv(Key, Opts, undefined).

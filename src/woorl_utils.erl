@@ -10,26 +10,24 @@
 %%
 
 -spec unique_string(binary()) -> binary().
-
 unique_string(Prefix) ->
     <<ID:64>> = snowflake:new(?MODULE),
     IDBin = genlib_format:format_int_base(ID, 62),
     <<Prefix/binary, IDBin/binary>>.
 
 -spec temp_dir(undefined | string(), string()) -> string().
-
 temp_dir(TmpRoot, Prefix) ->
     Name = unique_string(genlib:to_binary(Prefix)),
-    Tmp = case TmpRoot of
-        undefined ->
-            os:getenv("TMPDIR", "/tmp");
-        _ ->
-            TmpRoot
-    end,
+    Tmp =
+        case TmpRoot of
+            undefined ->
+                os:getenv("TMPDIR", "/tmp");
+            _ ->
+                TmpRoot
+        end,
     genlib:to_list(filename:join(Tmp, Name)).
 
 -spec sh(string() | binary()) -> {ok, string()} | {error, {1..255, string()}}.
-
 sh(Command) ->
     PortSettings = [exit_status, {line, 16384}, use_stdio, stderr_to_stdout, hide, eof],
     Port = open_port({spawn, Command}, PortSettings),
@@ -57,8 +55,7 @@ sh_loop(Port, Acc) ->
 
 -define(BLK_SIZE, 16384).
 
--spec read_input() ->
-    binary().
+-spec read_input() -> binary().
 read_input() ->
     ok = io:setopts(standard_io, [binary]),
     string:chomp(read_input(<<>>)).

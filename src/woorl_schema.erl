@@ -6,14 +6,13 @@
     {tempdir, file:filename_all()}
 ].
 
--spec prepare([file:filename_all()], opts()) ->
-    {ok, [module()]} | {error, _Reason}.
+-spec prepare([file:filename_all()], opts()) -> {ok, [module()]} | {error, _Reason}.
 prepare(SchemaPaths, Opts) ->
     try
         _ = assert_paths(SchemaPaths),
         TempPath = make_temp_dir(woorl_utils:temp_dir(genlib_opts:get(tempdir, Opts), "woorl-gen")),
         Modules = lists:foldl(
-            fun (SchemaPath, Acc) -> prepare_schema(SchemaPath, TempPath) ++ Acc end,
+            fun(SchemaPath, Acc) -> prepare_schema(SchemaPath, TempPath) ++ Acc end,
             [],
             SchemaPaths
         ),
