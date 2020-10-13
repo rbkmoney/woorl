@@ -55,18 +55,12 @@ get_options_spec(woorl_json) ->
 
 report_usage(woorl) ->
     print_version(),
-    getopt:usage(
-        get_options_spec(woorl),
-        ?MODULE_STRING,
-        "[<param>...]",
-        [
-            {
-                "<param>",
-                "Function parameter according to Thrift schema, represented with JSON. "
-                "If it starts with `@' symbol then the rest will be interpreted as a name of a file containing JSON value."
-            }
-        ]
-    ),
+    ParamDescription = {
+        "<param>",
+        "Function parameter according to Thrift schema, represented with JSON. "
+        "If it starts with `@' symbol then the rest will be interpreted as a name of a file containing JSON value."
+    },
+    getopt:usage(get_options_spec(woorl), ?MODULE_STRING, "[<param>...]", [ParamDescription]),
     report_exit_codes([
         ?SUCCESS,
         ?EXCEPTION,
