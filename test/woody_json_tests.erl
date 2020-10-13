@@ -1,4 +1,5 @@
 -module(woody_json_tests).
+
 -include_lib("eunit/include/eunit.hrl").
 
 -record(testStruct, {
@@ -34,7 +35,6 @@ json_term_test_() ->
     ].
 
 -spec non_printable_test_() -> _.
-
 non_printable_test_() ->
     T1 = <<"Hello there!">>,
     J1 = T1,
@@ -47,7 +47,6 @@ non_printable_test_() ->
     ].
 
 -spec enum_map_test_() -> _.
-
 enum_map_test_() ->
     T = {map, {enum, {?MODULE, testEnum}}, i32},
     V = #{red => 42, indeterminate => 43},
@@ -64,39 +63,39 @@ test_json_1() ->
     [
         [
             {<<"key">>, [[42.42], []]},
-            {<<"value">>, [{<<"127">>, [
-                {<<"tp">>, <<"black">>},
-                {<<"name">>, <<"magic">>},
-                {<<"parent">>, [
-                    {<<"link">>, [
-                        {<<"tp">>, <<"red">>},
-                        {<<"name">>, <<"herring">>}
+            {<<"value">>, [
+                {<<"127">>, [
+                    {<<"tp">>, <<"black">>},
+                    {<<"name">>, <<"magic">>},
+                    {<<"parent">>, [
+                        {<<"link">>, [
+                            {<<"tp">>, <<"red">>},
+                            {<<"name">>, <<"herring">>}
+                        ]}
                     ]}
                 ]}
-            ]}]}
+            ]}
         ]
     ].
 
 test_term_1() ->
     #{
-        [[42.42], []] => #{127 => #testStruct{
-            tp = black,
-            name = <<"magic">>,
-            parent = {link, #testStruct{tp = red, name = <<"herring">>}}
-        }}
+        [[42.42], []] => #{
+            127 => #testStruct{
+                tp = black,
+                name = <<"magic">>,
+                parent = {link, #testStruct{tp = red, name = <<"herring">>}}
+            }
+        }
     }.
 
 test_schema() ->
-    {map,
-        {list, {set, double}},
-        {map, i8, {struct, struct, {?MODULE, testStruct}}}
-    }.
+    {map, {list, {set, double}}, {map, i8, {struct, struct, {?MODULE, testStruct}}}}.
 
 -spec struct_info(atom()) ->
     {struct, struct | union | exception, [
         {pos_integer(), required | optional | undefined, woorl_thrift:type(), atom(), term() | undefined}
     ]}.
-
 struct_info(testStruct) ->
     {struct, struct, [
         {1, required, {enum, {?MODULE, testEnum}}, 'tp', undefined},
@@ -112,7 +111,6 @@ struct_info(_) ->
     error(badarg).
 
 -spec enum_info(atom()) -> {enum, [{atom(), integer()}]}.
-
 enum_info(testEnum) ->
     {enum, [
         {red, 1},
@@ -123,7 +121,6 @@ enum_info(_) ->
     error(badarg).
 
 -spec record_name(atom()) -> atom() | no_return().
-
 record_name(testStruct) ->
     'testStruct';
 record_name(_) ->

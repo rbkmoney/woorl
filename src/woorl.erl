@@ -1,4 +1,5 @@
 -module(woorl).
+
 -mode(compile).
 
 -export([main/1]).
@@ -6,28 +7,24 @@
 %%
 
 -behaviour(woody_event_handler).
+
 -export([handle_event/4]).
 
 %%
 
--define(SUCCESS       , 0).
--define(EXCEPTION     , 1).
--define(WOODY_ERROR   , 2).
--define(COMPILE_ERROR , 64).
--define(INPUT_ERROR   , 128).
+-define(SUCCESS, 0).
+-define(EXCEPTION, 1).
+-define(WOODY_ERROR, 2).
+-define(COMPILE_ERROR, 64).
+-define(INPUT_ERROR, 128).
 
 get_options_spec(woorl) ->
     [
-        {help, $h, "help", undefined,
-            "Print this message and exit"},
-        {verbose, $v, "verbose", {boolean, false},
-            "Be more verbose"},
-        {reqid, undefined, "reqid", {binary, get_default_reqid()},
-            "Designated request identifier"},
-        {schema, $s, "schema", string,
-            "One or more Thrift schema definitions to use"},
-        {user_id, $u, "user-id", string,
-            "ID of the user on whose behalf the call is being made"},
+        {help, $h, "help", undefined, "Print this message and exit"},
+        {verbose, $v, "verbose", {boolean, false}, "Be more verbose"},
+        {reqid, undefined, "reqid", {binary, get_default_reqid()}, "Designated request identifier"},
+        {schema, $s, "schema", string, "One or more Thrift schema definitions to use"},
+        {user_id, $u, "user-id", string, "ID of the user on whose behalf the call is being made"},
         {user_name, undefined, "user-name", string,
             "Name of the user identified with user-id, ignored when user-id is not set"},
         {user_email, undefined, "user-email", string,
@@ -40,40 +37,35 @@ get_options_spec(woorl) ->
         {deadline, undefined, "deadline", binary,
             "The request deadline, either absolute (e.g. '1990-12-31T23:59:60.123123Z')"
             "or relative (e.g. '15h', '3000ms', '3.5d' etc). Known units are 'ms', 's', 'm', 'h', 'd'."},
-        {url, undefined, undefined, string,
-            "Woody service URL (e.g. 'http://svc.localhost/v1/leftpad')"},
-        {service, undefined, undefined, string,
-            "Woody service name (e.g. 'LeftPadder')"},
-        {function, undefined, undefined, string,
-            "Woody service function name (e.g. 'PadIt')"}
+        {url, undefined, undefined, string, "Woody service URL (e.g. 'http://svc.localhost/v1/leftpad')"},
+        {service, undefined, undefined, string, "Woody service name (e.g. 'LeftPadder')"},
+        {function, undefined, undefined, string, "Woody service function name (e.g. 'PadIt')"}
     ];
-
 get_options_spec(woorl_json) ->
     [
-        {help, $h, "help", undefined,
-            "Print this message and exit"},
-        {schema, $s, "schema", string,
-            "Thrift schema definition to use"},
-        {type, $t, "type", atom,
-            "Thrift type to use, e.g. 'ComplexStruct'"},
+        {help, $h, "help", undefined, "Print this message and exit"},
+        {schema, $s, "schema", string, "Thrift schema definition to use"},
+        {type, $t, "type", atom, "Thrift type to use, e.g. 'ComplexStruct'"},
         {tempdir, undefined, "tempdir", string,
             "A path to the directory which will be used to temporarily store Thrift compilation artifacts"},
         {decode, $d, "decode", boolean,
             "Decode a Thrift binary into JSON representation of a Thrift term (this is default mode)"},
-        {encode, $e, "encode", boolean,
-            "Encode a JSON representation of Thrift term into a Thrift binary"}
+        {encode, $e, "encode", boolean, "Encode a JSON representation of Thrift term into a Thrift binary"}
     ].
 
 report_usage(woorl) ->
     print_version(),
     getopt:usage(
-        get_options_spec(woorl), ?MODULE_STRING,
+        get_options_spec(woorl),
+        ?MODULE_STRING,
         "[<param>...]",
-        [{
-            "<param>",
-            "Function parameter according to Thrift schema, represented with JSON. "
-            "If it starts with `@' symbol then the rest will be interpreted as a name of a file containing JSON value."
-        }]
+        [
+            {
+                "<param>",
+                "Function parameter according to Thrift schema, represented with JSON. "
+                "If it starts with `@' symbol then the rest will be interpreted as a name of a file containing JSON value."
+            }
+        ]
     ),
     report_exit_codes([
         ?SUCCESS,
@@ -82,11 +74,11 @@ report_usage(woorl) ->
         ?COMPILE_ERROR,
         ?INPUT_ERROR
     ]);
-
 report_usage(woorl_json) ->
     print_version(),
     getopt:usage(
-        get_options_spec(woorl_json), "woorl-json",
+        get_options_spec(woorl_json),
+        "woorl-json",
         []
     ),
     report_exit_codes([
@@ -100,16 +92,18 @@ print_version() ->
     io:format(standard_error, "~s ~s~n~n", [?MODULE_STRING, Vsn]).
 
 report_exit_codes(Codes) ->
-    io:format(standard_error, "~s", [[
-        "Exit status:\n" |
-        [[pad_exit_code(Code), $\t, format_exit_code(Code), $\n] || Code <- Codes]
-    ]]).
+    io:format(standard_error, "~s", [
+        [
+            "Exit status:\n"
+            | [[pad_exit_code(Code), $\t, format_exit_code(Code), $\n] || Code <- Codes]
+        ]
+    ]).
 
-format_exit_code(?SUCCESS)       -> "Call succeeded";
-format_exit_code(?EXCEPTION)     -> "Call raised an exception";
-format_exit_code(?WOODY_ERROR)   -> "Call failed";
+format_exit_code(?SUCCESS) -> "Call succeeded";
+format_exit_code(?EXCEPTION) -> "Call raised an exception";
+format_exit_code(?WOODY_ERROR) -> "Call failed";
 format_exit_code(?COMPILE_ERROR) -> "Schema compilation failed";
-format_exit_code(?INPUT_ERROR)   -> "Input error".
+format_exit_code(?INPUT_ERROR) -> "Input error".
 
 pad_exit_code(C) ->
     genlib_string:pad_left(integer_to_binary(C), $\s, 5).
@@ -120,7 +114,6 @@ get_default_reqid() ->
 %%
 
 -spec main([string()]) -> no_return().
-
 main(Args) ->
     ok = configure_logger(),
     ok = init_globals(),
@@ -153,14 +146,14 @@ parse_options(Script, Args) ->
 
 prepare_options(woorl, Opts, Args) ->
     Url = require_option(url, Opts),
-    SchemaPaths = require_options(schema, Opts), % we deliberately do not care about duplicates here
+    % we deliberately do not care about duplicates here
+    SchemaPaths = require_options(schema, Opts),
     ServiceName = require_option(service, Opts),
     FunctionName = require_option(function, Opts),
     Modules = prepare_schemas(SchemaPaths, Opts),
     {Service, Function, Schema} = detect_service_function(ServiceName, FunctionName, Modules),
     FunctionArgs = prepare_function_args(Args, Schema),
     {Url, {Service, Function, FunctionArgs}, Schema, Opts};
-
 prepare_options(woorl_json, Opts, []) ->
     TypeName = require_option(type, Opts),
     SchemaPath = require_option(schema, Opts),
@@ -228,7 +221,9 @@ read_arg_contents(A) ->
     A.
 
 decode_json(A) ->
-    try woorl_json:decode(A) catch
+    try
+        woorl_json:decode(A)
+    catch
         error:badarg ->
             abort(?INPUT_ERROR, {invalid_json, A})
     end.
@@ -237,19 +232,22 @@ decode_thrift(V, Type) ->
     Codec = thrift_strict_binary_codec:new(V),
     case thrift_strict_binary_codec:read(Codec, Type) of
         {ok, Term, CodecLeft} ->
-            _ = case thrift_strict_binary_codec:close(CodecLeft) of
-                <<>> ->
-                    ok;
-                Leftovers ->
-                    report_error({excess_thrift_bytes, Leftovers})
-            end,
+            _ =
+                case thrift_strict_binary_codec:close(CodecLeft) of
+                    <<>> ->
+                        ok;
+                    Leftovers ->
+                        report_error({excess_thrift_bytes, Leftovers})
+                end,
             Term;
         {error, Reason} ->
             abort(?INPUT_ERROR, {invalid_thrift, Reason})
     end.
 
 json_to_term(Json, Type, N) ->
-    try woorl_json:json_to_term(Json, Type) catch
+    try
+        woorl_json:json_to_term(Json, Type)
+    catch
         {invalid, Where} ->
             abort(?INPUT_ERROR, {invalid_term, N, Where});
         {missing, Where} ->
@@ -261,7 +259,9 @@ issue_call(Url, Request, Opts) ->
     RpcID = woody_context:new_rpc_id(<<"undefined">>, ReqID, woody_context:new_req_id()),
     Context = apply_options_to_context(Opts, woody_context:new(RpcID)),
     CallOpts = #{url => Url, event_handler => ?MODULE},
-    try woody_client:call(Request, CallOpts, Context) catch
+    try
+        woody_client:call(Request, CallOpts, Context)
+    catch
         error:{woody_error, Reason} ->
             {error, Reason}
     end.
@@ -280,7 +280,7 @@ attach_user_identity(Opts, Context) ->
             Identity2 = maps:fold(
                 fun
                     (_, undefined, Identity) -> Identity;
-                    (K, V, Identity)         -> Identity#{K => list_to_binary(V)}
+                    (K, V, Identity) -> Identity#{K => list_to_binary(V)}
                 end,
                 Identity1,
                 #{
@@ -340,7 +340,9 @@ convert_input(encode, Type, Input) ->
     thrift_strict_binary_codec:close(Codec1).
 
 json_to_term(Json, Type) ->
-    try woorl_json:json_to_term(Json, Type) catch
+    try
+        woorl_json:json_to_term(Json, Type)
+    catch
         {invalid, Where} ->
             abort(?INPUT_ERROR, {invalid_term, Where});
         {missing, Where} ->
@@ -352,9 +354,8 @@ json_to_term(Json, Type) ->
 -spec handle_event(Event, RpcId, Meta, Opts) -> ok when
     Event :: woody_event_handler:event(),
     RpcId :: woody:rpc_id() | undefined,
-    Meta  :: woody_event_handler:event_meta(),
-    Opts  :: woody:options().
-
+    Meta :: woody_event_handler:event_meta(),
+    Opts :: woody:options().
 handle_event(Event, RpcID, Meta, _Opts) ->
     report_progress({woody, RpcID, Event, Meta}).
 
@@ -466,8 +467,7 @@ format_error({missing_term, N, Path}) ->
 format_error({missing_term, Path}) ->
     {"Input does not conform to schema, missing required field ~!^~s~!!~n", [format_path(Path)]};
 format_error({unknown_service_function, Service, Function}) ->
-    {"Unable to find service ~!^~s~!! with declared function ~!^~s~!!~n",
-        [Service, Function]};
+    {"Unable to find service ~!^~s~!! with declared function ~!^~s~!!~n", [Service, Function]};
 format_error({arguments_mismatch, Passed, Required}) ->
     {"Function accepts ~p parameters but ~p passed~n", [Required, Passed]};
 format_error({woody_error, {_Source, Class, Details}}) ->
@@ -486,7 +486,9 @@ format_path(Path) ->
     string:join(lists:map(fun format_path_part/1, Path), ".").
 
 format_path_part(V) ->
-    try genlib:to_list(V) catch
+    try
+        genlib:to_list(V)
+    catch
         error:_ ->
             io_lib:format("~p", [V])
     end.
@@ -508,25 +510,21 @@ report_exception(R) ->
     report_reply(R).
 
 -spec abort_with_usage(term()) -> no_return().
-
 abort_with_usage(Why) ->
     report_error(Why),
     report_usage(get_global(script)),
     abort(?INPUT_ERROR).
 
 -spec exit_with_usage() -> no_return().
-
 exit_with_usage() ->
     report_usage(get_global(script)),
     abort(?SUCCESS).
 
 -spec abort(1..255, term()) -> no_return().
-
 abort(Code, Why) ->
     report_error(Why),
     abort(Code).
 
 -spec abort(1..255) -> no_return().
-
 abort(Code) ->
     erlang:halt(Code).
