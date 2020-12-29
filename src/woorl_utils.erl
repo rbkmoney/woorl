@@ -11,7 +11,7 @@
 
 -spec unique_string(binary()) -> binary().
 unique_string(Prefix) ->
-    <<ID:64>> = snowflake:new(?MODULE),
+    <<ID:64>> = crypto:strong_rand_bytes(8),
     IDBin = genlib_format:format_int_base(ID, 62),
     <<Prefix/binary, IDBin/binary>>.
 
