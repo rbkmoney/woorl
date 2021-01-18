@@ -4,12 +4,12 @@
 build('woorl', 'docker-host') {
 
   checkoutRepo()
-  loadBuildUtils('build-utils')
+  loadBuildUtils()
 
   def pipeErlangLib
   runStage('load pipeline') {
-    env.JENKINS_LIB = "build-utils/jenkins_lib"
-    env.SH_TOOLS = "build-utils/sh"
+    env.JENKINS_LIB = "build_utils/jenkins_lib"
+    env.SH_TOOLS = "build_utils/sh"
     pipeErlangLib = load("${env.JENKINS_LIB}/pipeErlangLib.groovy")
   }
 

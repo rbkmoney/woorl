@@ -1,8 +1,8 @@
 REBAR := $(shell which rebar3 2>/dev/null || which ./rebar3)
-SUBMODULES = build-utils
+SUBMODULES = build_utils
 SUBTARGETS = $(patsubst %,%/.git,$(SUBMODULES))
 
-UTILS_PATH := build-utils
+UTILS_PATH := build_utils
 TEMPLATES_PATH := .
 
 # Name of the service
