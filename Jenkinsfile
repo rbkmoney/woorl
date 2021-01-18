@@ -13,6 +13,6 @@ build('woorl', 'docker-host') {
     pipeErlangLib = load("${env.JENKINS_LIB}/pipeErlangLib.groovy")
   }
 
-  pipeErlangLib.runPipe(false)
+  pipeErlangLib.runPipe(false, false, 'test')
 }
 
