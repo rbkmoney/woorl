@@ -5,7 +5,7 @@
 -record(testStruct, {
     tp :: red | black | indeterminate,
     name :: binary(),
-    parent :: {link, #testStruct{}} | {tag, binary()}
+    parent :: {link, #testStruct{}} | {tag, binary()} | undefined
 }).
 
 -export([struct_info/1]).
