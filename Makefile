@@ -14,7 +14,7 @@ SERVICE_IMAGE_PUSH_TAG ?= $(SERVICE_IMAGE_TAG)
 
 # Build image to be used
 BUILD_IMAGE_NAME := build-erlang
-BUILD_IMAGE_TAG := 19ff48ccbe09b00b79303fc6e5c63a3a9f8fd859
+BUILD_IMAGE_TAG := 623eafbd7fb9be04ad54d878e00b85a99da8e88e
 
 CALL_ANYWHERE    := all submodules compile xref lint dialyze test clean distclean format check_format
 CALL_W_CONTAINER := $(CALL_ANYWHERE)
@@ -49,7 +49,7 @@ xref:
 	$(REBAR) xref
 
 dialyze:
-	$(REBAR) dialyzer
+	$(REBAR) as test dialyzer
 
 test:
 	$(REBAR) eunit
