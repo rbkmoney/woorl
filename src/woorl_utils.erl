@@ -58,7 +58,7 @@ sh_loop(Port, Acc) ->
 -spec read_input() -> binary().
 read_input() ->
     ok = io:setopts(standard_io, [binary]),
-    string:chomp(read_input(<<>>)).
+    read_input(<<>>).
 
 read_input(Acc) ->
     case file:read(standard_io, ?BLK_SIZE) of
