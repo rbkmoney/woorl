@@ -230,6 +230,10 @@ decode_thrift(V, Type) ->
                 case thrift_strict_binary_codec:close(CodecLeft) of
                     <<>> ->
                         ok;
+                    <<$\n>> ->
+                        ok;
+                    <<$\r, $\n>> ->
+                        ok;
                     Leftovers ->
                         report_error({excess_thrift_bytes, Leftovers})
                 end,

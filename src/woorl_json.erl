@@ -194,10 +194,10 @@ term_to_json(Term, Type, _Stack) when is_integer(Term), ?is_integer(Type) ->
 term_to_json(Term, double, _Stack) when is_number(Term) ->
     float(Term);
 term_to_json(Term, string, _Stack) when is_binary(Term) ->
-    case unicode:characters_to_list(Term) of
-        L when is_list(L) ->
+    case is_printable_string(Term) of
+        true ->
             Term;
-        _ ->
+        false ->
             term_to_json_content(Term)
     end;
 term_to_json(Term, bool, _Stack) when is_boolean(Term) ->
@@ -246,3 +246,10 @@ getv(Key, Opts, Default) ->
         {_, Value} -> Value;
         false -> Default
     end.
+
+is_printable_string(Term) ->
+    % NOTE
+    % This approach wastes heap space, it's better to do this in a streaming manner with the help
+    % of `string:next_codepoint/1`, though that would require factoring out
+    % `io_lib:printable_unicode_list/1` implementation here, into `is_printable_char/1`.
+    io_lib:printable_unicode_list(unicode:characters_to_list(Term)).
