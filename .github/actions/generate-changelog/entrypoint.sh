@@ -16,7 +16,7 @@ if [ "$INPUT_ISSUES" = "yes" ]; then _ISSUES="--issues"; else _ISSUES="--no-issu
 # This effectively evaluates to _the closest tag (resembling a version)
 # preceding previous commit on primary branch_. If the latest commit is newly
 # tagged then `_SINCE_TAG` should contain previous tag, otherwise latest one.
-_PREV_COMMIT=$(git rev-list --max-count=1 --skip=1 "$GITHUB_REF")
+_PREV_COMMIT=$(git rev-list --max-count=1 --skip=1 "$GITHUB_SHA")
 _SINCE_TAG=$(git describe --abbrev=0 --tags --match='[0-9].*' "$_PREV_COMMIT")
 
 /usr/local/bundle/bin/github_changelog_generator \
