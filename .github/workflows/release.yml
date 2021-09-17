@@ -1,0 +1,26 @@
+name: release-tag
+on:
+  push:
+    tags:
+      - "[0-9].*"
+
+jobs:
+  escript:
+    runs-on: ubuntu-latest
+    container: erlang:23
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Build escript
+        run: rebar3 escriptize
+      - name: Build changelog
+        uses: ./.github/actions/generate-changelog
+        id: changelog
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish release
+        uses: ncipollo/release-action@v1.8.9
+        with:
+          artifacts: "_build/default/bin/*"
+          body: ${{ steps.changelog.outputs.changelog }}
+          token: ${{ secrets.GITHUB_TOKEN }}

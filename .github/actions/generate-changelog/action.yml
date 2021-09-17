@@ -1,0 +1,24 @@
+name: "Generate changelog snippet"
+description: |
+  Generates a snippet of the project changelog between latest git tags using
+  information provided by repository history and the GitHub API, with the help
+  of https://github.com/github-changelog-generator/github-changelog-generator.
+inputs:
+  token:
+    description: "Which token to authorize GitHub API requests with?"
+    required: true
+  primaryBranch:
+    description: "Against which git branch (ref) to track changes and tagged versions?"
+    required: false
+    default: "master"
+  issues:
+    description: "Should snippet include closed issues?"
+    required: false
+    default: "yes"
+  author:
+    description: "Should snippet include author of each pull request?"
+    required: false
+    default: "yes"
+runs:
+  using: docker
+  image: Dockerfile
