@@ -7,10 +7,6 @@ inputs:
   token:
     description: "Which token to authorize GitHub API requests with?"
     required: true
-  primaryBranch:
-    description: "Against which git branch (ref) to track changes and tagged versions?"
-    required: false
-    default: "master"
   issues:
     description: "Should snippet include closed issues?"
     required: false
