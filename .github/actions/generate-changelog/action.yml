@@ -7,6 +7,9 @@ inputs:
   token:
     description: "Which token to authorize GitHub API requests with?"
     required: true
+  sinceTag:
+    description: "Which tag to consider latest?"
+    required: true
   issues:
     description: "Should snippet include closed issues?"
     required: false

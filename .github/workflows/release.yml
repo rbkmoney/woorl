@@ -14,12 +14,22 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      - name: Build escript
-        run: rebar3 escriptize
+      # - name: Build escript
+      #   run: rebar3 escriptize
+      - name: Fetch latest release information
+        uses: octokit/request-action@v2
+        id: latest_release
+        with:
+          route: GET /repos/{owner}/{repo}/releases/latest
+          owner: ${{ github.repository_owner }}
+          repo: woorl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Build changelog
         uses: ./.github/actions/generate-changelog
         id: changelog
         with:
+          sinceTag: ${{ fromJSON(steps.latest_release.outputs.data).tag_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish release
         uses: ncipollo/release-action@v1.8.9
