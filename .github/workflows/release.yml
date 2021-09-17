@@ -3,9 +3,6 @@ on:
   push:
     tags:
       - "[0-9].*"
-  pull_request:
-    branches:
-      - master
 
 jobs:
   escript:
@@ -14,8 +11,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      # - name: Build escript
-      #   run: rebar3 escriptize
+      - name: Build escript
+        run: rebar3 escriptize
       - name: Fetch latest release information
         uses: octokit/request-action@v2.x
         id: latest_release
@@ -36,4 +33,4 @@ jobs:
         with:
           artifacts: "_build/default/bin/*"
           body: ${{ steps.changelog.outputs.changelog }}
-          # token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
