@@ -10,7 +10,7 @@ SERVICE_NAME := woorl
 
 # Build image to be used
 BUILD_IMAGE_NAME := build-erlang
-BUILD_IMAGE_TAG := 623eafbd7fb9be04ad54d878e00b85a99da8e88e
+BUILD_IMAGE_TAG := 2ea61e9556ad67d5918f060ed50353662ed84e59
 
 CALL_ANYWHERE    := all submodules compile xref lint dialyze test clean distclean format check_format
 CALL_W_CONTAINER := $(CALL_ANYWHERE)

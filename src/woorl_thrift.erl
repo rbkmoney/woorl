@@ -84,6 +84,6 @@ get_exception_type(Exception, {_, _, {struct, _, StructDef}}) ->
     ExceptionName = element(1, Exception),
     hd([
         {En, Type}
-        || {_N, _Req, {struct, exception, {Mod, En}} = Type, _Name, _} <- StructDef,
-           Mod:record_name(En) =:= ExceptionName
+     || {_N, _Req, {struct, exception, {Mod, En}} = Type, _Name, _} <- StructDef,
+        Mod:record_name(En) =:= ExceptionName
     ]).
