@@ -17,7 +17,7 @@ jobs:
       # - name: Build escript
       #   run: rebar3 escriptize
       - name: Fetch latest release information
-        uses: octokit/request-action@v2
+        uses: octokit/request-action@v2.x
         id: latest_release
         with:
           route: GET /repos/{owner}/{repo}/releases/latest
