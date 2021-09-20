@@ -7,6 +7,10 @@ inputs:
   token:
     description: "Which token to authorize GitHub API requests with?"
     required: true
+  filename:
+    description: "Which file to put generated changelog in?"
+    required: false
+    default: ".generated-changelog.md"
   sinceTag:
     description: "Which tag to consider latest?"
     required: true

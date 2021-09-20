@@ -8,7 +8,7 @@ fi
 
 _USER=$(echo "$GITHUB_REPOSITORY" | cut -d / -f 1 )
 _PROJECT=$(echo "$GITHUB_REPOSITORY" | cut -d / -f 2- )
-_OUTPUT=".generated-changelog.md"
+_OUTPUT="$INPUT_FILENAME"
 if [ "$INPUT_AUTHOR" = "yes" ]; then _AUTHOR="--author"; else _AUTHOR="--no-author"; fi
 if [ "$INPUT_ISSUES" = "yes" ]; then _ISSUES="--issues"; else _ISSUES="--no-issues"; fi
 
@@ -25,3 +25,4 @@ if [ "$INPUT_ISSUES" = "yes" ]; then _ISSUES="--issues"; else _ISSUES="--no-issu
 sed -i '$ d' $_OUTPUT
 
 echo ::set-output name=changelog::"$(cat $_OUTPUT)"
+echo ::set-output name=filename::"$_OUTPUT"

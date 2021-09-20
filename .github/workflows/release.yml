@@ -32,5 +32,5 @@ jobs:
         uses: ncipollo/release-action@v1.8.9
         with:
           artifacts: "_build/default/bin/*"
-          body: ${{ steps.changelog.outputs.changelog }}
+          bodyFile: ${{ steps.changelog.outputs.filename }}
           token: ${{ secrets.GITHUB_TOKEN }}
